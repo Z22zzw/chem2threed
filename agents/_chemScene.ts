@@ -275,7 +275,8 @@ function detectMolecule(text: string): string {
 }
 
 function isSaponification(text: string): boolean {
-  return containsAny(text, [
+  const normalized = text.toLowerCase();
+  return containsAny(normalized, [
     '皂化',
     'saponification',
     '酯水解',
@@ -284,6 +285,54 @@ function isSaponification(text: string): boolean {
     '酯在碱性',
     '肥皂',
   ]);
+}
+
+function isNitration(text: string): boolean {
+  const normalized = text.toLowerCase();
+  const hasBenzene = containsAny(normalized, ['苯', 'benzene', 'c6h6']);
+  const hasNitricAcid = containsAny(normalized, ['浓硝酸', '硝酸', 'nitric acid', 'hno3']);
+  return containsAny(normalized, ['硝化', 'nitration', '硝基苯', 'nitrobenzene'])
+    || (hasBenzene && hasNitricAcid);
+}
+
+function isGenericReaction(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return containsAny(normalized, [
+    '化学反应',
+    '反应过程',
+    '反应',
+    '燃烧',
+    '生成水',
+    '水解',
+    '酯化',
+    '取代',
+    '加成',
+    '消去',
+    '氧化',
+    '还原',
+    '中和',
+    'reaction',
+    'combustion',
+    'hydrolysis',
+    'substitution',
+    'addition',
+  ]);
+}
+
+function isKnownReaction(text: string): boolean {
+  return isSaponification(text) || isNitration(text);
+}
+
+function reactionNameForInput(text: string): string {
+  if (isSaponification(text)) return '皂化反应过程';
+  if (isNitration(text)) return '苯的硝化反应过程';
+  return '化学反应过程';
+}
+
+function reactionKnowledgeForInput(text: string): string {
+  if (isSaponification(text)) return '酯在碱性条件下水解生成羧酸盐和醇的过程';
+  if (isNitration(text)) return '苯环发生亲电取代，引入硝基生成硝基苯的过程';
+  return '反应物、生成物、化学键重组和反应过程动画';
 }
 
 export function parseChemRequest(rawInput: string, attachments: AttachmentInput[] = []): ParsedChemRequest {
@@ -296,7 +345,9 @@ export function parseChemRequest(rawInput: string, attachments: AttachmentInput[
   const cnInput = `${rawInput} ${attachmentText}`;
 
   let templateId: SceneTemplateId = 'molecule-3d';
-  if (containsAny(normalizedInput, ['晶体', '晶胞', '氯化钠', 'nacl', 'crystal'])) {
+  if (isKnownReaction(cnInput)) {
+    templateId = 'reaction-3d';
+  } else if (containsAny(normalizedInput, ['晶体', '晶胞', '氯化钠', 'nacl', 'crystal'])) {
     templateId = 'crystal-3d';
   } else if (containsAny(normalizedInput, ['轨道', '杂化轨道', '电子云', 'orbital', 'sp3', 'sp2'])) {
     templateId = 'orbital-3d';
@@ -304,7 +355,7 @@ export function parseChemRequest(rawInput: string, attachments: AttachmentInput[
     templateId = 'equipment-3d';
   } else if (containsAny(normalizedInput, ['实验装置', '制取氧气', '烧瓶', '导管', '集气瓶', 'apparatus'])) {
     templateId = 'apparatus-3d';
-  } else if (isSaponification(cnInput) || containsAny(normalizedInput, ['化学反应', '反应过程', '燃烧', '生成水', 'reaction', 'combustion', 'hydrolysis'])) {
+  } else if (isGenericReaction(cnInput)) {
     templateId = 'reaction-3d';
   }
 
@@ -312,7 +363,7 @@ export function parseChemRequest(rawInput: string, attachments: AttachmentInput[
   const molecule = moleculeKey === 'benzene' ? buildBenzene() : MOLECULES[moleculeKey];
   const templateName: Record<SceneTemplateId, string> = {
     'molecule-3d': molecule.title,
-    'reaction-3d': isSaponification(cnInput) ? '皂化反应过程' : '化学反应过程',
+    'reaction-3d': reactionNameForInput(cnInput),
     'crystal-3d': '氯化钠晶体结构',
     'orbital-3d': containsAny(normalizedInput, ['sp2']) ? 'sp2 杂化轨道' : 'sp3 杂化轨道',
     'equipment-3d': '精馏塔结构与物流方向',
@@ -320,9 +371,7 @@ export function parseChemRequest(rawInput: string, attachments: AttachmentInput[
   };
   const knowledgePoint: Record<SceneTemplateId, string> = {
     'molecule-3d': molecule.knowledgePoint,
-    'reaction-3d': isSaponification(cnInput)
-      ? '酯在碱性条件下水解生成羧酸盐和醇的过程'
-      : '反应物、生成物、化学键重组和反应过程动画',
+    'reaction-3d': reactionKnowledgeForInput(cnInput),
     'crystal-3d': '离子晶体、晶胞、配位关系和空间周期性',
     'orbital-3d': '杂化轨道方向、空间构型和成键取向',
     'equipment-3d': '化工设备结构、内部构件和物料流向',
@@ -495,6 +544,108 @@ function buildSaponificationChemistry(): Record<string, unknown> {
   };
 }
 
+function buildNitricAcidMolecule(): Record<string, unknown> {
+  return {
+    label: '浓硝酸 HNO3',
+    formula: 'HNO3',
+    atoms: [
+      { element: 'N', position: [0, 0, 0], label: 'N' },
+      { element: 'O', position: [0.95, 0, 0], label: 'O' },
+      { element: 'O', position: [-0.52, 0.82, 0], label: 'O' },
+      { element: 'O', position: [-0.52, -0.82, 0], label: 'O' },
+      { element: 'H', position: [-1.18, -1.2, 0], label: 'H' },
+    ],
+    bonds: [
+      { from: 0, to: 1, type: 'double' },
+      { from: 0, to: 2, type: 'double' },
+      { from: 0, to: 3, type: 'single' },
+      { from: 3, to: 4, type: 'single' },
+    ],
+    annotations: [
+      { type: 'note', label: '浓硝酸提供硝化试剂', position: [0, 1.25, 0] },
+      { type: 'note', label: 'H2SO4 促进 NO2+ 形成', position: [0, -1.35, 0] },
+    ],
+  };
+}
+
+function buildNitrobenzeneMolecule(): Record<string, unknown> {
+  const atoms: Atom[] = [];
+  const bonds: Bond[] = [];
+  const radius = 1.35;
+
+  for (let i = 0; i < 6; i += 1) {
+    const a = (Math.PI * 2 * i) / 6;
+    atoms.push({ element: 'C', position: [Math.cos(a) * radius, Math.sin(a) * radius, 0], label: 'C' });
+  }
+
+  for (let i = 1; i < 6; i += 1) {
+    const a = (Math.PI * 2 * i) / 6;
+    atoms.push({ element: 'H', position: [Math.cos(a) * 2.25, Math.sin(a) * 2.25, 0], label: 'H' });
+  }
+
+  const nitroN = atoms.length;
+  atoms.push({ element: 'N', position: [2.25, 0, 0], label: 'N' });
+  const nitroO1 = atoms.length;
+  atoms.push({ element: 'O', position: [3.02, 0.5, 0], label: 'O' });
+  const nitroO2 = atoms.length;
+  atoms.push({ element: 'O', position: [3.02, -0.5, 0], label: 'O' });
+
+  for (let i = 0; i < 6; i += 1) {
+    bonds.push({ from: i, to: (i + 1) % 6, type: i % 2 === 0 ? 'double' : 'single' });
+  }
+  for (let i = 1; i < 6; i += 1) {
+    bonds.push({ from: i, to: 5 + i, type: 'single' });
+  }
+  bonds.push({ from: 0, to: nitroN, type: 'single' });
+  bonds.push({ from: nitroN, to: nitroO1, type: 'double' });
+  bonds.push({ from: nitroN, to: nitroO2, type: 'single' });
+
+  return {
+    label: '硝基苯 C6H5NO2',
+    formula: 'C6H5NO2',
+    atoms,
+    bonds,
+    annotations: [
+      { type: 'group', label: '硝基 -NO2', position: [2.85, 0, 0] },
+      { type: 'note', label: '芳香性恢复', position: [0, 0, 0.3] },
+    ],
+  };
+}
+
+function buildBenzeneNitrationChemistry(): Record<string, unknown> {
+  const benzene = buildBenzene();
+  const water = MOLECULES.water;
+
+  return {
+    equation: 'C6H6 + HNO3 -> C6H5NO2 + H2O',
+    conditions: ['浓硝酸', '浓硫酸催化', '约 50-60 °C'],
+    steps: ['HNO3/H2SO4 生成 NO2+', '苯环 π 电子进攻 NO2+', '脱去 H+ 后恢复芳香性，生成硝基苯'],
+    reactants: [
+      {
+        label: '苯 C6H6',
+        formula: benzene.formula,
+        atoms: benzene.atoms,
+        bonds: benzene.bonds,
+        annotations: [
+          { type: 'group', label: '苯环 π 电子云', position: [0, 0, 0.28] },
+        ],
+      },
+      buildNitricAcidMolecule(),
+    ],
+    products: [
+      buildNitrobenzeneMolecule(),
+      {
+        label: '水 H2O',
+        formula: water.formula,
+        atoms: water.atoms,
+        bonds: water.bonds,
+        annotations: water.annotations ?? [],
+      },
+    ],
+    focus: ['亲电芳香取代', '硝鎓离子 NO2+', '硝基取代苯环上的 H'],
+  };
+}
+
 export function buildSceneSpec(
   parsed: ParsedChemRequest,
   selections: Record<string, unknown> | undefined = {},
@@ -536,6 +687,15 @@ export function buildSceneSpec(
   }
 
   if (templateId === 'reaction-3d') {
+    if (isNitration(parsed.rawInput) || isNitration(parsed.normalizedInput)) {
+      return {
+        ...base,
+        title: '苯的硝化反应',
+        teachingGoal: '展示苯与浓硝酸在浓硫酸催化下发生亲电芳香取代，理解 NO2+ 生成、苯环进攻和硝基苯生成过程。',
+        chemistry: buildBenzeneNitrationChemistry(),
+      };
+    }
+
     if (isSaponification(parsed.rawInput) || isSaponification(parsed.normalizedInput)) {
       return {
         ...base,

@@ -286,6 +286,8 @@ function buildPrompt(
     '- interactions 至少包含 rotate 和 zoom，可加入 atom_label、bond_angle、key_note、animate。',
     '- molecule-3d 的 chemistry 必须包含 atoms 和 bonds。atoms 使用 { element, position:[x,y,z], label }，bonds 使用 { from, to, type }，下标从 0 开始。',
     '- reaction-3d 的 chemistry 应包含 equation、steps；如果能表达分子，请补充 reactants/products，结构同 molecule。',
+    '- 出现硝化、皂化、燃烧、水解、酯化、取代、加成、氧化还原等反应过程时，templateId 必须是 reaction-3d；不要因为出现苯、甲烷等单个分子名就降级为 molecule-3d。',
+    '- “苯和浓硝酸的硝化反应 / benzene nitration”应生成苯、浓硝酸、硝基苯、水和 NO2+ 相关步骤的 reaction-3d 场景。',
     '- crystal-3d 的 chemistry 包含 lattice、repeat、ions。',
     '- orbital-3d 的 chemistry 包含 orbitalType、angle。',
     '- equipment-3d / apparatus-3d 的 chemistry 包含 parts，并尽量补充 flowLabels 或 safetyNotes。',
