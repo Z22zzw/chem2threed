@@ -1,29 +1,20 @@
 {
   "name": "chemscene-agent",
+  "private": true,
   "version": "1.0.0",
-  "description": "Chemistry 3D teaching modeling agent - generates Three.js scenes from natural language",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsup src/index.ts --format esm --dts --no-shims && node -e \"require('fs').cpSync('src/web','dist/web',{recursive:true});require('fs').cpSync('src/templates','dist/templates',{recursive:true})\"",
-    "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit",
-    "deploy:makers": "echo '部署到 EdgeOne Makers：将代码推送到已绑定的 Git 仓库主分支即可自动部署'",
-    "deploy:html": "npx -y mcporter call mcp-on-edge.edgeone.app/mcp-server.deploy-html value=\"$(cat generated/latest/index.html)\""
+    "dev": "vite",
+    "dev:agents": "edgeone makers dev",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "ai": "^4.0.0",
-    "@ai-sdk/openai": "^1.0.0",
-    "hono": "^4.6.0",
-    "@hono/node-server": "^1.13.0",
-    "zod": "^3.23.0",
-    "dotenv": "^16.4.0",
     "nanoid": "^5.0.0"
   },
   "devDependencies": {
+    "@types/node": "^26.0.1",
     "typescript": "^5.5.0",
-    "tsx": "^4.19.0",
-    "tsup": "^8.3.0",
-    "@types/node": "^22.0.0"
+    "vite": "^5.4.0"
   }
 }

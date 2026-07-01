@@ -1,5 +1,5 @@
 // 化学反应模板 - 多步反应过程的3D动画展示
-import type { SceneTemplate, ReactionParams, Atom, Bond } from '../types/index.js';
+import type { SceneTemplate, ReactionParams, Atom, Bond } from '../types.js';
 import { pageShell, getColorScheme, CPK_COLORS, ATOM_RADII } from './_shared/boilerplate.js';
 
 export const reactionTemplate: SceneTemplate = {

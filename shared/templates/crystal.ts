@@ -1,5 +1,5 @@
 // 晶体结构模板 - 展示晶体晶胞结构
-import type { SceneTemplate } from '../types/index.js';
+import type { SceneTemplate } from '../types.js';
 import { pageShell, CPK_COLORS, ATOM_RADII } from './_shared/boilerplate.js';
 
 interface CrystalParams {

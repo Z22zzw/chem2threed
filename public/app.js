@@ -1,65 +1,61 @@
-// 前端交互逻辑
+// 前端交互逻辑 - Makers 兼容版
 const messagesEl = document.getElementById('messages');
-const inputEl = document.getElementById('input') as HTMLTextAreaElement;
-const sendBtn = document.getElementById('btn-send') as HTMLButtonElement;
-const uploadBtn = document.getElementById('btn-upload') as HTMLButtonElement;
-const fileInput = document.getElementById('file-input') as HTMLInputElement;
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('btn-send');
+const uploadBtn = document.getElementById('btn-upload');
+const fileInput = document.getElementById('file-input');
 const attachmentsEl = document.getElementById('attachments');
 const statusDot = document.getElementById('status-dot');
 const statusText = document.getElementById('status-text');
 const sidePlaceholder = document.getElementById('side-placeholder');
 const previewContainer = document.getElementById('preview-container');
-const previewFrame = document.getElementById('preview-frame') as HTMLIFrameElement;
-const previewLink = document.getElementById('preview-link') as HTMLAnchorElement;
+const previewFrame = document.getElementById('preview-frame');
+const previewLink = document.getElementById('preview-link');
 const deployResult = document.getElementById('deploy-result');
-const deployUrl = document.getElementById('deploy-url') as HTMLAnchorElement;
-const btnCopyUrl = document.getElementById('btn-copy-url') as HTMLButtonElement;
-const btnFullscreen = document.getElementById('btn-fullscreen') as HTMLButtonElement;
-const btnHistory = document.getElementById('btn-history') as HTMLButtonElement;
+const deployUrl = document.getElementById('deploy-url');
+const btnCopyUrl = document.getElementById('btn-copy-url');
+const btnFullscreen = document.getElementById('btn-fullscreen');
+const btnHistory = document.getElementById('btn-history');
 const historyModal = document.getElementById('history-modal');
 const btnCloseHistory = document.getElementById('btn-close-history');
 const historyList = document.getElementById('history-list');
 
-let messages: Array<{ role: string; content: string }> = [];
-let attachments: Array<{ type: string; path: string; extractedText?: string; name: string }> = [];
+let conversationId = localStorage.getItem('chemscene-cid') || ('cid-' + Date.now() + '-' + Math.random().toString(36).slice(2,8));
+localStorage.setItem('chemscene-cid', conversationId);
+
+let attachments = [];
 let isProcessing = false;
 
-function setStatus(state: 'idle' | 'busy' | 'error', text: string) {
+function setStatus(state, text) {
   statusDot.className = 'status-dot' + (state === 'busy' ? ' busy' : state === 'error' ? ' error' : '');
   statusText.textContent = text;
 }
 
-function addMessage(role: 'user' | 'assistant', content: string) {
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function addMessage(role, content) {
   const div = document.createElement('div');
   div.className = 'msg ' + role;
-  div.innerHTML = `
-    <div class="msg-avatar">${role === 'user' ? '我' : 'AI'}</div>
-    <div class="msg-content"><p>${escapeHtml(content)}</p></div>
-  `;
+  div.innerHTML = '<div class="msg-avatar">' + (role === 'user' ? '我' : 'AI') + '</div>' +
+    '<div class="msg-content"><p>' + escapeHtml(content) + '</p></div>';
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return div;
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function addToolIndicator(toolName: string, args?: any) {
+function addToolIndicator(toolName) {
   const div = document.createElement('div');
   div.className = 'msg assistant';
-  const labels: Record<string, string> = {
-    parseInput: '正在解析您的需求...',
+  const labels = {
+    parse_input: '正在解析您的需求...',
     clarify: '需要确认一些细节',
     generate: '正在生成3D模型代码...',
     deploy: '正在部署到 EdgeOne...',
   };
-  div.innerHTML = `
-    <div class="msg-avatar">AI</div>
-    <div class="msg-content">
-      <div class="tool-indicator"><span class="dot"></span>${labels[toolName] || toolName}</div>
-    </div>
-  `;
+  div.innerHTML = '<div class="msg-avatar">AI</div><div class="msg-content">' +
+    '<div class="tool-indicator"><span class="dot"></span>' + (labels[toolName] || toolName) + '</div></div>';
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
   return div;
@@ -75,38 +71,41 @@ async function sendMessage() {
   inputEl.style.height = 'auto';
 
   addMessage('user', text);
-  messages.push({ role: 'user', content: text });
 
   // 组装附件
   const attachPayload = attachments.map(a => ({
     type: a.type,
-    path: a.path,
     extractedText: a.extractedText,
   }));
-
-  // 清空附件显示
   attachments = [];
   renderAttachments();
 
   setStatus('busy', '正在思考...');
 
-  // 创建 assistant 消息占位
   const assistantDiv = addMessage('assistant', '');
-  const contentP = assistantDiv.querySelector('.msg-content p') as HTMLElement;
+  const contentP = assistantDiv.querySelector('.msg-content p');
   contentP.innerHTML = '<span class="typing-indicator"><span></span><span></span><span></span></span>';
 
   let fullText = '';
+  let lastHtmlContent = '';
 
   try {
-    const response = await fetch('/api/chat', {
+    const response = await fetch('/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, attachments: attachPayload }),
+      headers: {
+        'Content-Type': 'application/json',
+        'makers-conversation-id': conversationId,
+      },
+      body: JSON.stringify({
+        message: text,
+        conversation_id: conversationId,
+        attachments: attachPayload,
+      }),
     });
 
     if (!response.ok) throw new Error('请求失败: ' + response.status);
 
-    const reader = response.body!.getReader();
+    const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
 
@@ -114,10 +113,8 @@ async function sendMessage() {
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-
       const lines = buffer.split('\n');
       buffer = lines.pop() || '';
-
       let currentEvent = '';
       for (const line of lines) {
         if (line.startsWith('event:')) {
@@ -126,14 +123,14 @@ async function sendMessage() {
           const data = line.slice(5).trim();
           try {
             const parsed = JSON.parse(data);
-            handleSSEEvent(currentEvent, parsed, contentP, () => { fullText = ''; });
+            handleSSEEvent(currentEvent, parsed, contentP);
           } catch {}
         }
       }
     }
 
     setStatus('idle', '就绪');
-  } catch (err: any) {
+  } catch (err) {
     contentP.textContent = '出错了：' + err.message;
     setStatus('error', '错误');
   } finally {
@@ -142,10 +139,9 @@ async function sendMessage() {
   }
 }
 
-function handleSSEEvent(event: string, data: any, contentP: HTMLElement, resetText: () => void) {
+function handleSSEEvent(event, data, contentP) {
   switch (event) {
     case 'text':
-      // 移除 typing indicator
       const typing = contentP.querySelector('.typing-indicator');
       if (typing) typing.remove();
       contentP.textContent += data.content;
@@ -153,51 +149,44 @@ function handleSSEEvent(event: string, data: any, contentP: HTMLElement, resetTe
       break;
 
     case 'tool_call':
-      addToolIndicator(data.tool, data.args);
+      addToolIndicator(data.tool);
       if (data.tool === 'generate') setStatus('busy', '生成3D模型中...');
       if (data.tool === 'deploy') setStatus('busy', '部署中...');
-      if (data.tool === 'parseInput') setStatus('busy', '解析需求中...');
+      if (data.tool === 'parse_input') setStatus('busy', '解析需求中...');
       break;
 
     case 'tool_result':
-      if (data.tool === 'generate' && data.result?.success) {
-        showPreview(data.result.previewUrl);
+      if (data.tool === 'generate' && data.result && data.result.success) {
+        lastHtmlContent = data.result.htmlContent || '';
+        showPreview(lastHtmlContent);
       }
-      if (data.tool === 'deploy' && data.result?.success) {
+      if (data.tool === 'deploy' && data.result && data.result.success) {
         showDeployResult(data.result.url);
       }
       break;
 
     case 'done':
-      if (data.url) {
-        showDeployResult(data.url);
-      }
-      // 保存到 messages
-      const lastAssistant = messagesEl.querySelector('.msg.assistant:last-of-type .msg-content p') as HTMLElement;
-      if (lastAssistant && lastAssistant.textContent) {
-        messages.push({ role: 'assistant', content: lastAssistant.textContent });
-      }
       break;
 
     case 'error':
       const errTyping = contentP.querySelector('.typing-indicator');
       if (errTyping) errTyping.remove();
-      contentP.textContent += '\n[错误] ' + data.message;
-      setStatus('error', data.message);
+      contentP.textContent += '\n[错误] ' + (data.message || '');
+      setStatus('error', data.message || '错误');
       break;
   }
 }
 
-function showPreview(url: string) {
+let lastHtmlContent = '';
+
+function showPreview(htmlContent) {
   sidePlaceholder.style.display = 'none';
   previewContainer.style.display = 'flex';
   deployResult.style.display = 'none';
-  const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
-  previewFrame.src = fullUrl;
-  previewLink.href = fullUrl;
+  previewFrame.srcdoc = htmlContent;
 }
 
-function showDeployResult(url: string) {
+function showDeployResult(url) {
   deployResult.style.display = 'block';
   deployUrl.href = url;
   deployUrl.textContent = url;
@@ -208,12 +197,12 @@ function renderAttachments() {
   attachments.forEach((a, i) => {
     const chip = document.createElement('div');
     chip.className = 'attachment-chip';
-    chip.innerHTML = `${escapeHtml(a.name)} <span class="remove" data-idx="${i}">&times;</span>`;
+    chip.innerHTML = escapeHtml(a.name) + ' <span class="remove" data-idx="' + i + '">&times;</span>';
     attachmentsEl.appendChild(chip);
   });
   attachmentsEl.querySelectorAll('.remove').forEach(el => {
     el.addEventListener('click', (e) => {
-      const idx = parseInt((e.target as HTMLElement).getAttribute('data-idx')!);
+      const idx = parseInt(e.target.getAttribute('data-idx'));
       attachments.splice(idx, 1);
       renderAttachments();
     });
@@ -224,23 +213,21 @@ uploadBtn.addEventListener('click', () => fileInput.click());
 
 fileInput.addEventListener('change', async () => {
   for (const file of Array.from(fileInput.files || [])) {
-    const formData = new FormData();
-    formData.append('file', file);
+    // 前端直接读取文件内容
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.error) {
-        alert(data.error);
-        continue;
+      let extractedText = '';
+      if (file.type.startsWith('text/') || file.name.match(/\.(txt|md|json|csv)$/i)) {
+        extractedText = await file.text();
+      } else {
+        extractedText = '[' + file.name + ' 文件已上传，请在对话中描述内容]';
       }
       attachments.push({
         type: file.type.startsWith('image/') ? 'image' : 'file',
-        path: data.path,
-        extractedText: data.extractedText,
+        extractedText: extractedText.slice(0, 8000),
         name: file.name,
       });
-    } catch (err: any) {
-      alert('上传失败: ' + err.message);
+    } catch (err) {
+      alert('读取文件失败: ' + err.message);
     }
   }
   renderAttachments();
@@ -274,36 +261,33 @@ btnHistory.addEventListener('click', async () => {
   historyModal.style.display = 'flex';
   historyList.innerHTML = '<p>加载中...</p>';
   try {
-    const res = await fetch('/api/history');
+    const res = await fetch('/history', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'makers-conversation-id': conversationId,
+      },
+      body: JSON.stringify({ conversation_id: conversationId }),
+    });
     const data = await res.json();
-    if (!data.history || data.history.length === 0) {
+    if (!data.messages || data.messages.length === 0) {
       historyList.innerHTML = '<p style="color:#6e6e73">暂无历史记录</p>';
       return;
     }
     historyList.innerHTML = '';
-    data.history.forEach((item: any) => {
+    data.messages.forEach((item) => {
       const div = document.createElement('div');
       div.className = 'history-item';
-      div.innerHTML = `
-        <div class="title">${escapeHtml(item.title)}</div>
-        <div class="meta">${new Date(item.timestamp).toLocaleString('zh-CN')} · ${item.template}${item.outputUrl ? ' · <a href="' + item.outputUrl + '" target="_blank">查看</a>' : ''}</div>
-      `;
-      if (item.outputUrl) {
-        div.addEventListener('click', () => {
-          window.open(item.outputUrl, '_blank');
-        });
-      }
+      div.innerHTML = '<div class="title">' + escapeHtml(item.role === 'user' ? '用户' : 'AI') + '</div>' +
+        '<div class="meta">' + escapeHtml(item.content.slice(0, 100)) + '</div>';
       historyList.appendChild(div);
     });
-  } catch (err) {
+  } catch {
     historyList.innerHTML = '<p>加载失败</p>';
   }
 });
 
-btnCloseHistory.addEventListener('click', () => {
-  historyModal.style.display = 'none';
-});
-
+btnCloseHistory.addEventListener('click', () => { historyModal.style.display = 'none'; });
 historyModal.addEventListener('click', (e) => {
   if (e.target === historyModal) historyModal.style.display = 'none';
 });

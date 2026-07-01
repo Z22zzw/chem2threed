@@ -1,5 +1,5 @@
 // Three.js 公共代码片段 - 生成页面用的 HTML/CSS/JS 基础框架
-import type { Atom } from '../../types/index.js';
+import type { Atom } from '../../types.js';
 
 // CPK 配色 (Corey-Pauling-Koltun)
 export const CPK_COLORS: Record<string, number> = {
