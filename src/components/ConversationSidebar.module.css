@@ -5,11 +5,11 @@
   min-width: 0;
   min-height: 0;
   background:
-    linear-gradient(180deg, rgba(245, 200, 66, 0.04) 0%, transparent 18%),
-    rgba(10, 10, 16, 0.78);
+    linear-gradient(180deg, rgba(184, 121, 24, 0.08) 0%, transparent 18%),
+    rgba(249, 252, 251, 0.9);
   border-right: 1px solid var(--bg-border);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(120%);
+  -webkit-backdrop-filter: blur(18px) saturate(120%);
   position: relative;
 }
 
@@ -20,7 +20,7 @@
   right: 0;
   width: 1px;
   height: 100%;
-  background: linear-gradient(180deg, transparent, rgba(245, 200, 66, 0.18), transparent);
+  background: linear-gradient(180deg, transparent, rgba(184, 121, 24, 0.22), transparent);
   pointer-events: none;
 }
 
@@ -48,7 +48,7 @@
 }
 .brandDot {
   color: var(--accent-gold);
-  filter: drop-shadow(0 0 6px var(--accent-gold-glow));
+  filter: none;
   font-size: 0.95rem;
   line-height: 1;
 }
@@ -60,7 +60,7 @@
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--accent-gold-dim);
-  background: rgba(245, 200, 66, 0.08);
+  background: rgba(184, 121, 24, 0.1);
   color: var(--accent-gold);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -73,9 +73,9 @@
               transform var(--transition-fast);
 }
 .newBtn:hover:not(:disabled) {
-  background: rgba(245, 200, 66, 0.16);
+  background: rgba(184, 121, 24, 0.16);
   border-color: var(--accent-gold);
-  box-shadow: 0 0 12px rgba(245, 200, 66, 0.18);
+  box-shadow: 0 8px 18px rgba(184, 121, 24, 0.14);
 }
 .newBtn:active:not(:disabled) {
   transform: scale(0.97);
@@ -124,7 +124,7 @@
               color var(--transition-fast);
 }
 .item:hover:not(:disabled):not(.itemActive) {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(59, 159, 150, 0.08);
   color: var(--text-primary);
 }
 .item:disabled {
@@ -133,11 +133,10 @@
 }
 
 .itemActive {
-  background: linear-gradient(180deg, rgba(245, 200, 66, 0.12), rgba(245, 200, 66, 0.04));
+  background: linear-gradient(180deg, rgba(184, 121, 24, 0.13), rgba(184, 121, 24, 0.05));
   border-color: var(--accent-gold-dim);
   color: var(--text-primary);
-  box-shadow: inset 0 0 0 1px rgba(245, 200, 66, 0.06),
-              0 0 18px rgba(245, 200, 66, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(184, 121, 24, 0.08);
 }
 
 .itemRow {
@@ -212,8 +211,8 @@
 }
 
 .deleteBtn:hover:not(:disabled) {
-  background: rgba(255, 100, 100, 0.14);
-  color: #ff6b6b;
+  background: rgba(198, 91, 120, 0.12);
+  color: var(--accent-magenta);
 }
 .deleteBtn:active:not(:disabled) {
   transform: translateY(-50%) scale(0.94);
@@ -271,7 +270,7 @@
   width: 100%;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--bg-border);
   color: var(--text-secondary);
   font-family: var(--font-mono);
@@ -283,7 +282,7 @@
               border-color var(--transition-fast);
 }
 .loadMore:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(59, 159, 150, 0.08);
   color: var(--text-primary);
   border-color: var(--accent-gold-dim);
 }

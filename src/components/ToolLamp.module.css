@@ -6,7 +6,7 @@
   padding: 5px 9px;
   border-radius: 8px;
   border: 1px solid var(--bg-border);
-  background: rgba(255,255,255,.025);
+  background: rgba(255, 255, 255, .72);
   font-family: var(--font-mono);
   font-size: .66rem;
   color: var(--text-secondary);
@@ -29,7 +29,7 @@
   background: linear-gradient(
     105deg,
     transparent 15%,
-    rgba(93,217,199,.36) 50%,
+    rgba(59, 159, 150, .22) 50%,
     transparent 84%
   );
   transform: translateX(-130%) skewX(-18deg);
@@ -43,7 +43,7 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  border: 1px solid rgba(93,217,199,.65);
+  border: 1px solid rgba(59, 159, 150, .54);
   pointer-events: none;
   opacity: 0;
   z-index: 0;
@@ -70,12 +70,11 @@
 
 .active {
   color: var(--accent-cyan);
-  border-color: rgba(93,217,199,.55);
-  background: rgba(93,217,199,.09);
+  border-color: rgba(59, 159, 150, .5);
+  background: rgba(59, 159, 150, .1);
   box-shadow:
-    0 0  8px rgba(93,217,199,.26),
-    0 0 22px rgba(93,217,199,.12),
-    inset 0  1px 0 rgba(255,255,255,.08);
+    0 8px 16px rgba(59, 159, 150, .14),
+    inset 0  1px 0 rgba(255,255,255,.88);
   animation: chipIgnite 420ms cubic-bezier(.34, 1.35, .64, 1) both;
 }
 

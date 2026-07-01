@@ -3,8 +3,8 @@
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: rgba(10, 10, 14, 0.92);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--bg-border);
   border-radius: var(--radius-lg, 12px);
   overflow: hidden;
 }
@@ -15,8 +15,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--bg-border);
+  background: rgba(246, 250, 249, 0.9);
   flex-shrink: 0;
 }
 
@@ -39,7 +39,7 @@
   height: 8px;
   border-radius: 50%;
   background: #22c55e;
-  box-shadow: 0 0 6px #22c55e88;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, .14);
   animation: pulse 2s ease infinite;
   flex-shrink: 0;
 }
@@ -60,7 +60,7 @@
 .count {
   font-size: 0.65rem;
   color: var(--text-muted, #666);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(59, 159, 150, 0.08);
   padding: 2px 6px;
   border-radius: 4px;
   white-space: nowrap;
@@ -69,8 +69,8 @@
 .clearBtn {
   font-size: 0.65rem;
   color: var(--text-secondary, #999);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--bg-border);
   border-radius: 4px;
   padding: 3px 8px;
   cursor: pointer;
@@ -79,9 +79,9 @@
 }
 
 .clearBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(59, 159, 150, 0.08);
   color: var(--text-primary, #e2e2e2);
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(59, 159, 150, .32);
 }
 
 .body {
@@ -107,10 +107,10 @@
 }
 
 .event {
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bg-border);
   border-radius: 6px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
+  background: #ffffff;
   flex-shrink: 0;
 }
 
@@ -120,8 +120,8 @@
   justify-content: space-between;
   gap: 8px;
   padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: #f5f9f8;
+  border-bottom: 1px solid var(--bg-border);
 }
 
 .eventType {

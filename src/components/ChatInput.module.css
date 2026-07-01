@@ -5,7 +5,7 @@
   flex-direction: column;
   gap: 8px;
   flex-shrink: 0;
-  background: rgba(255,255,255,.018);
+  background: rgba(255, 255, 255, .82);
 }
 
 .presets {
@@ -39,7 +39,7 @@
 .presetChip:hover:not(:disabled) {
   color: var(--accent-cyan);
   border-color: var(--accent-cyan);
-  background: rgba(93, 217, 199, 0.09);
+  background: rgba(59, 159, 150, 0.09);
 }
 
 .presetChip:disabled {
@@ -62,7 +62,7 @@
   padding: 7px 8px;
   border: 1px solid var(--bg-border);
   border-radius: 8px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, .72);
 }
 
 .attachmentError {
@@ -76,7 +76,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  background: rgba(93, 217, 199, .09);
+  background: rgba(59, 159, 150, .1);
   color: var(--accent-cyan);
   font-size: 10px;
   font-weight: 700;
@@ -121,8 +121,8 @@
 
 .removeAttachment:hover:not(:disabled) {
   color: var(--accent-magenta);
-  border-color: rgba(220, 90, 130, .4);
-  background: rgba(220, 90, 130, .1);
+  border-color: rgba(198, 91, 120, .34);
+  background: rgba(198, 91, 120, .1);
 }
 
 .inputWrap {
@@ -137,8 +137,8 @@
 }
 
 .inputWrap:focus-within {
-  border-color: rgba(93, 217, 199, .65);
-  box-shadow: 0 0 0 3px rgba(93, 217, 199, .1);
+  border-color: rgba(59, 159, 150, .58);
+  box-shadow: 0 0 0 3px rgba(59, 159, 150, .12);
 }
 
 .inputDisabled {
@@ -196,21 +196,21 @@
 
 .attachBtn:hover:not(:disabled) {
   color: var(--accent-cyan);
-  border-color: rgba(93, 217, 199, .5);
-  background: rgba(93, 217, 199, .08);
+  border-color: rgba(59, 159, 150, .44);
+  background: rgba(59, 159, 150, .08);
 }
 
 .sendBtn {
   border: none;
   background: var(--accent-cyan);
-  color: #061213;
-  box-shadow: 0 0 12px rgba(93, 217, 199, .28);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(59, 159, 150, .24);
 }
 
 .sendBtn:hover:not(:disabled) {
-  background: #86f3e0;
+  background: #2f8f88;
   transform: scale(1.04);
-  box-shadow: 0 0 20px rgba(93, 217, 199, .45);
+  box-shadow: 0 10px 24px rgba(59, 159, 150, .28);
 }
 
 .sendBtn:active:not(:disabled),
@@ -231,18 +231,18 @@
   border: none;
   background: var(--accent-magenta);
   color: #fff;
-  box-shadow: 0 0 12px rgba(220, 90, 130, .35);
+  box-shadow: 0 8px 18px rgba(198, 91, 120, .22);
 }
 
 .stopBtn:hover {
-  background: #f06b91;
+  background: #b94f6c;
   transform: scale(1.04);
 }
 
 .clearBtn:hover:not(:disabled) {
   color: var(--text-primary);
   border-color: var(--text-muted);
-  background: rgba(255,255,255,.06);
+  background: rgba(59, 159, 150, .07);
   transform: scale(1.04);
 }
 

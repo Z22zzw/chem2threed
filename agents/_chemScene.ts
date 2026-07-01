@@ -797,7 +797,7 @@ export function buildSceneSpec(
     language: 'zh',
     visualStyle: {
       colorScheme: 'cpk',
-      background: 'dark',
+      background: 'light',
       displayMode,
     },
     interactions,
@@ -925,14 +925,14 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
   <title>${escapeHtml(spec.title)}</title>
   <style>
     :root {
-      color-scheme: dark;
-      --panel: rgba(13, 22, 24, 0.82);
-      --line: rgba(127, 207, 190, 0.28);
-      --text: #f2fbf8;
-      --muted: #9db7b2;
-      --cyan: #61d9c6;
-      --amber: #f2b84b;
-      --magenta: #dc5a82;
+      color-scheme: light;
+      --panel: rgba(255, 255, 255, 0.86);
+      --line: rgba(59, 159, 150, 0.24);
+      --text: #223132;
+      --muted: #607675;
+      --cyan: #3b9f96;
+      --amber: #b87918;
+      --magenta: #c65b78;
     }
     * { box-sizing: border-box; }
     body {
@@ -942,11 +942,10 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       font-family: Inter, "Segoe UI", Arial, sans-serif;
       color: var(--text);
       background:
-        linear-gradient(90deg, rgba(97,217,198,0.06) 1px, transparent 1px),
-        linear-gradient(0deg, rgba(97,217,198,0.05) 1px, transparent 1px),
-        radial-gradient(circle at 24% 20%, rgba(220,90,130,0.18), transparent 34%),
-        linear-gradient(135deg, #071012 0%, #132022 52%, #07100f 100%);
-      background-size: 42px 42px, 42px 42px, auto, auto;
+        linear-gradient(90deg, rgba(59, 159, 150, 0.13) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(59, 159, 150, 0.09) 1px, transparent 1px),
+        linear-gradient(135deg, #fbfcfb 0%, #f6faf8 58%, #edf5f3 100%);
+      background-size: 44px 44px, 44px 44px, auto;
     }
     #app { position: fixed; inset: 0; }
     .hud {
@@ -959,7 +958,7 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       border-radius: 8px;
       background: var(--panel);
       backdrop-filter: blur(16px);
-      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.32);
+      box-shadow: 0 18px 60px rgba(46, 72, 72, 0.14);
     }
     .kicker {
       margin: 0 0 8px;
@@ -970,7 +969,7 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
     }
     h1 {
       margin: 0;
-      font-size: clamp(20px, 4vw, 34px);
+      font-size: 28px;
       line-height: 1.1;
       letter-spacing: 0;
     }
@@ -993,7 +992,7 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       min-height: 34px;
       border: 1px solid var(--line);
       border-radius: 8px;
-      background: rgba(8, 16, 17, 0.8);
+      background: rgba(255, 255, 255, 0.84);
       color: var(--text);
       padding: 8px 11px;
       font: 600 12px/1 Inter, "Segoe UI", Arial, sans-serif;
@@ -1019,7 +1018,7 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       display: grid;
       place-items: center;
       color: var(--cyan);
-      background: #071012;
+      background: #fbfcfb;
       z-index: 5;
     }
     .hidden { display: none; }
@@ -1059,24 +1058,26 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
     const SPEC = ${specJson};
     const root = document.getElementById('app');
     const scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(0x071012, 10, 38);
+    scene.background = new THREE.Color(0xfbfcfb);
+    scene.fog = new THREE.Fog(0xfbfcfb, 14, 42);
     const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 100);
     camera.position.set(5.8, 4.6, 6.8);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.setClearColor(0xfbfcfb, 1);
     root.appendChild(renderer.domElement);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
 
-    scene.add(new THREE.AmbientLight(0xdffcf5, 0.82));
-    const key = new THREE.DirectionalLight(0xffffff, 1.45);
+    scene.add(new THREE.AmbientLight(0xffffff, 1.18));
+    const key = new THREE.DirectionalLight(0xffffff, 1.55);
     key.position.set(4, 6, 5);
     scene.add(key);
-    const rim = new THREE.PointLight(0x61d9c6, 2.3, 18);
+    const rim = new THREE.PointLight(0x8ed8cf, 1.15, 18);
     rim.position.set(-5, 3, -4);
     scene.add(rim);
 
@@ -1088,8 +1089,8 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
     let animationEnabled = true;
 
     const atomColors = {
-      H: 0xf4f7fb, C: 0x30323a, O: 0xe84f5f, N: 0x5278ff,
-      Na: 0x6e8cff, Cl: 0x76d66f, S: 0xf2c94c
+      H: 0xf6f3e8, C: 0x66757a, O: 0xef7479, N: 0x6694e8,
+      Na: 0x94aaff, Cl: 0x84c977, S: 0xe3bd4c
     };
     const atomRadii = { H: 0.24, C: 0.38, O: 0.34, N: 0.35, Na: 0.38, Cl: 0.46, S: 0.42 };
 
@@ -1103,16 +1104,16 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       });
     }
 
-    function textSprite(text, color = '#f2fbf8') {
+    function textSprite(text, color = '#223132') {
       const canvas = document.createElement('canvas');
       canvas.width = 512;
       canvas.height = 160;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = 'rgba(7, 16, 18, 0.72)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
       roundRect(ctx, 18, 28, 476, 96, 18);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(97, 217, 198, 0.48)';
+      ctx.strokeStyle = 'rgba(59, 159, 150, 0.36)';
       ctx.stroke();
       ctx.fillStyle = color;
       ctx.font = '600 42px Inter, Segoe UI, Arial';
@@ -1151,7 +1152,7 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       return mesh;
     }
 
-    function addLabel(text, position, color = '#f2fbf8') {
+    function addLabel(text, position, color = '#223132') {
       const sprite = textSprite(text, color);
       sprite.position.set(position[0], position[1], position[2]);
       labels.add(sprite);
@@ -1164,7 +1165,7 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       const radius = SPEC.visualStyle.displayMode === 'space_filling' ? baseRadius * 1.55 : baseRadius;
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(radius, 48, 32),
-        material(atomColors[element] ?? 0xb8ccd0, 0.34, 0.08)
+        material(atomColors[element] ?? 0xb8ccd0, 0.36, 0.04)
       );
       mesh.position.set(...atom.position);
       target.add(mesh);
@@ -1177,11 +1178,11 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
     function addBond(a, b, type = 'single', target = staticGroup) {
       const offsets = type === 'double' ? [-0.07, 0.07] : type === 'triple' ? [-0.11, 0, 0.11] : [0];
       for (const offset of offsets) {
-        cylinderBetween([a[0], a[1] + offset, a[2]], [b[0], b[1] + offset, b[2]], 0.075, 0xb7c9cb, target);
+        cylinderBetween([a[0], a[1] + offset, a[2]], [b[0], b[1] + offset, b[2]], 0.075, 0xa8b8bc, target);
       }
     }
 
-    function arrow(from, to, color = 0x61d9c6, target = staticGroup) {
+    function arrow(from, to, color = 0x3b9f96, target = staticGroup) {
       cylinderBetween(from, to, 0.035, color, target);
       const start = new THREE.Vector3(...from);
       const end = new THREE.Vector3(...to);
@@ -1210,7 +1211,7 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       for (const note of content.annotations || []) {
         if (note.label && SPEC.interactions.includes('key_note')) {
           const p = note.position || [0, 1.6, 0];
-          addLabel(note.label, [p[0] + offset[0], p[1] + offset[1], p[2] + offset[2]], '#f2b84b');
+          addLabel(note.label, [p[0] + offset[0], p[1] + offset[1], p[2] + offset[2]], '#9d6814');
         }
       }
     }
@@ -1228,26 +1229,26 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
         modelReactants.forEach((content, i) => {
           const y = (reactantCount - 1) * 0.72 - i * 1.44;
           buildMolecule(content, [-3.0, y, 0], animated, 0.78);
-          addLabel(labelOf(content, i), [-3.0, y + 1.05, 0], '#f2fbf8');
+          addLabel(labelOf(content, i), [-3.0, y + 1.05, 0], '#223132');
         });
         modelProducts.forEach((content, i) => {
           const y = (productCount - 1) * 0.72 - i * 1.44;
           buildMolecule(content, [3.0, y, 0], staticGroup, 0.78);
-          addLabel(labelOf(content, i), [3.0, y + 1.05, 0], '#f2fbf8');
+          addLabel(labelOf(content, i), [3.0, y + 1.05, 0], '#223132');
         });
-        arrow([-0.9, 0, 0], [0.9, 0, 0], 0xf2b84b, staticGroup);
-        addLabel(SPEC.chemistry.equation || 'reaction', [0, 0.76, 0], '#f2b84b');
+        arrow([-0.9, 0, 0], [0.9, 0, 0], 0xb87918, staticGroup);
+        addLabel(SPEC.chemistry.equation || 'reaction', [0, 0.76, 0], '#9d6814');
         const steps = Array.isArray(SPEC.chemistry.steps) ? SPEC.chemistry.steps : [];
-        if (steps[0]) addLabel(steps[0], [0, -0.86, 0], '#61d9c6');
+        if (steps[0]) addLabel(steps[0], [0, -0.86, 0], '#2f8f88');
         return;
       }
-      arrow([-2.2, 0, 0], [2.2, 0, 0], 0xf2b84b, staticGroup);
-      addLabel('反应物', [-3.0, 0.35, 0], '#f2fbf8');
-      addLabel('生成物', [3.0, 0.35, 0], '#f2fbf8');
-      addLabel(SPEC.chemistry.equation || SPEC.title || '化学反应', [0, 0.85, 0], '#f2b84b');
+      arrow([-2.2, 0, 0], [2.2, 0, 0], 0xb87918, staticGroup);
+      addLabel('反应物', [-3.0, 0.35, 0], '#223132');
+      addLabel('生成物', [3.0, 0.35, 0], '#223132');
+      addLabel(SPEC.chemistry.equation || SPEC.title || '化学反应', [0, 0.85, 0], '#9d6814');
       const steps = Array.isArray(SPEC.chemistry.steps) ? SPEC.chemistry.steps : [];
       steps.slice(0, 3).forEach((step, i) => {
-        addLabel(String(step), [0, -0.55 - i * 0.62, 0], i === 0 ? '#61d9c6' : '#f2fbf8');
+        addLabel(String(step), [0, -0.55 - i * 0.62, 0], i === 0 ? '#2f8f88' : '#223132');
       });
     }
 
@@ -1269,9 +1270,9 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       }
       const size = spacing * (repeat - 1);
       const box = new THREE.Box3(new THREE.Vector3(start, start, start), new THREE.Vector3(start + size, start + size, start + size));
-      const helper = new THREE.Box3Helper(box, 0x61d9c6);
+      const helper = new THREE.Box3Helper(box, 0x3b9f96);
       staticGroup.add(helper);
-      addLabel('Na+ / Cl- 交替排列', [0, 2.05, 0], '#f2b84b');
+      addLabel('Na+ / Cl- 交替排列', [0, 2.05, 0], '#9d6814');
     }
 
     function buildOrbital() {
@@ -1279,12 +1280,12 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
       const dirs = type === 'sp2'
         ? [[1,0,0], [-0.5,0.866,0], [-0.5,-0.866,0]]
         : [[1,1,1], [-1,-1,1], [-1,1,-1], [1,-1,-1]];
-      staticGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.16, 32, 20), material(0xf2b84b)));
+      staticGroup.add(new THREE.Mesh(new THREE.SphereGeometry(0.16, 32, 20), material(0xb87918)));
       dirs.forEach((raw, i) => {
         const dir = new THREE.Vector3(...raw).normalize();
         const lobe = new THREE.Mesh(
           new THREE.SphereGeometry(0.48, 48, 32),
-          material(i % 2 === 0 ? 0x61d9c6 : 0xdc5a82, 0.28, 0.02, 0.62)
+          material(i % 2 === 0 ? 0x6fc9bf : 0xd98198, 0.28, 0.02, 0.56)
         );
         lobe.position.copy(dir.clone().multiplyScalar(1.08));
         lobe.scale.set(0.78, 0.78, 1.55);
@@ -1295,59 +1296,59 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
         small.scale.set(0.28, 0.28, 0.52);
         staticGroup.add(small);
       });
-      addLabel(type.toUpperCase() + ' · ' + (SPEC.chemistry.angle || ''), [0, 1.9, 0], '#f2b84b');
+      addLabel(type.toUpperCase() + ' · ' + (SPEC.chemistry.angle || ''), [0, 1.9, 0], '#9d6814');
     }
 
     function buildEquipment() {
-      const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.72, 4.8, 48), material(0x8eb7bd, 0.3, 0.18, 0.58));
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.72, 4.8, 48), material(0xb7d4d1, 0.3, 0.08, 0.5));
       tower.position.set(0, 0, 0);
       staticGroup.add(tower);
       for (let i = -4; i <= 4; i += 1) {
-        const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.66, 0.025, 48), material(0x61d9c6, 0.35, 0.08, 0.72));
+        const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.66, 0.025, 48), material(0x7acdc4, 0.35, 0.04, 0.62));
         tray.position.y = i * 0.45;
         staticGroup.add(tray);
       }
-      cylinderBetween([-1.8, -0.4, 0], [-0.7, -0.4, 0], 0.06, 0xf2b84b);
-      arrow([-2.45, -0.4, 0], [-0.82, -0.4, 0], 0xf2b84b);
-      arrow([0, 2.62, 0], [0, 3.55, 0], 0x61d9c6);
-      arrow([0, -2.62, 0], [0, -3.55, 0], 0xdc5a82);
-      arrow([1.35, 2.2, 0], [0.55, 1.72, 0], 0x61d9c6);
-      addLabel('进料', [-2.2, -0.05, 0], '#f2b84b');
-      addLabel('塔顶产品', [0.7, 3.45, 0], '#61d9c6');
-      addLabel('塔底产品', [0.72, -3.45, 0], '#dc5a82');
-      addLabel('塔板', [1.25, 0.35, 0], '#f2fbf8');
+      cylinderBetween([-1.8, -0.4, 0], [-0.7, -0.4, 0], 0.06, 0xb87918);
+      arrow([-2.45, -0.4, 0], [-0.82, -0.4, 0], 0xb87918);
+      arrow([0, 2.62, 0], [0, 3.55, 0], 0x3b9f96);
+      arrow([0, -2.62, 0], [0, -3.55, 0], 0xc65b78);
+      arrow([1.35, 2.2, 0], [0.55, 1.72, 0], 0x3b9f96);
+      addLabel('进料', [-2.2, -0.05, 0], '#9d6814');
+      addLabel('塔顶产品', [0.7, 3.45, 0], '#2f8f88');
+      addLabel('塔底产品', [0.72, -3.45, 0], '#a94d66');
+      addLabel('塔板', [1.25, 0.35, 0], '#223132');
     }
 
     function buildApparatus() {
-      const flask = new THREE.Mesh(new THREE.SphereGeometry(0.82, 48, 32), material(0x8eb7bd, 0.18, 0.02, 0.42));
+      const flask = new THREE.Mesh(new THREE.SphereGeometry(0.82, 48, 32), material(0xb7d4d1, 0.18, 0.02, 0.36));
       flask.position.set(-2, -0.6, 0);
       staticGroup.add(flask);
-      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 32), material(0x8eb7bd, 0.2, 0.02, 0.46));
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 32), material(0xb7d4d1, 0.2, 0.02, 0.4));
       neck.position.set(-2, 0.35, 0);
       staticGroup.add(neck);
-      const burner = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 0.34, 32), material(0x30323a, 0.42, 0.18));
+      const burner = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 0.34, 32), material(0x748286, 0.42, 0.08));
       burner.position.set(-2, -1.75, 0);
       staticGroup.add(burner);
-      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.72, 32), material(0xf2b84b, 0.22, 0.0, 0.75));
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.72, 32), material(0xe0a93d, 0.22, 0.0, 0.68));
       flame.position.set(-2, -1.25, 0);
       staticGroup.add(flame);
-      cylinderBetween([-1.8, 0.75, 0], [0.1, 0.55, 0], 0.055, 0x61d9c6);
-      cylinderBetween([0.1, 0.55, 0], [1.55, -0.45, 0], 0.055, 0x61d9c6);
-      const trough = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.52, 1.2), material(0x23464a, 0.26, 0.02, 0.48));
+      cylinderBetween([-1.8, 0.75, 0], [0.1, 0.55, 0], 0.055, 0x3b9f96);
+      cylinderBetween([0.1, 0.55, 0], [1.55, -0.45, 0], 0.055, 0x3b9f96);
+      const trough = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.52, 1.2), material(0x9cccca, 0.26, 0.02, 0.38));
       trough.position.set(1.55, -1.04, 0);
       staticGroup.add(trough);
-      const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 1.55, 40), material(0x8eb7bd, 0.2, 0.02, 0.36));
+      const jar = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 1.55, 40), material(0xb7d4d1, 0.2, 0.02, 0.32));
       jar.position.set(1.55, -0.12, 0);
       staticGroup.add(jar);
       for (let i = 0; i < 8; i += 1) {
-        const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.055 + i * 0.004, 20, 16), material(0x61d9c6, 0.2, 0.02, 0.62));
+        const bubble = new THREE.Mesh(new THREE.SphereGeometry(0.055 + i * 0.004, 20, 16), material(0x6fc9bf, 0.2, 0.02, 0.56));
         bubble.position.set(0.55 + i * 0.17, -0.62 + (i % 3) * 0.16, 0.05 * (i % 2));
         animated.add(bubble);
       }
-      arrow([-0.65, 0.62, 0], [1.25, -0.34, 0], 0x61d9c6);
-      addLabel('发生装置', [-2.0, 0.98, 0], '#f2b84b');
-      addLabel('氧气流向', [0.35, 0.9, 0], '#61d9c6');
-      addLabel('集气瓶', [2.15, 0.58, 0], '#f2fbf8');
+      arrow([-0.65, 0.62, 0], [1.25, -0.34, 0], 0x3b9f96);
+      addLabel('发生装置', [-2.0, 0.98, 0], '#9d6814');
+      addLabel('氧气流向', [0.35, 0.9, 0], '#2f8f88');
+      addLabel('集气瓶', [2.15, 0.58, 0], '#223132');
     }
 
     if (SPEC.templateId === 'molecule-3d') buildMolecule(SPEC.chemistry);
@@ -1357,7 +1358,7 @@ export function renderThreeJsHtml(spec: SceneSpec): string {
     if (SPEC.templateId === 'equipment-3d') buildEquipment();
     if (SPEC.templateId === 'apparatus-3d') buildApparatus();
 
-    const grid = new THREE.GridHelper(8, 16, 0x1f6965, 0x1a3435);
+    const grid = new THREE.GridHelper(8, 16, 0x93c9c2, 0xd7e5e2);
     grid.position.y = -2.35;
     scene.add(grid);
 

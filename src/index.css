@@ -5,29 +5,29 @@
 }
 
 :root {
-  --bg-base: #071012;
-  --bg-surface: #0d1618;
-  --bg-elevated: #132124;
-  --bg-border: #294044;
+  --bg-base: #fbfcfb;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f1f7f5;
+  --bg-border: #cddeda;
 
-  --text-primary: #f2fbf8;
-  --text-secondary: #adc3bd;
-  --text-muted: #6b817c;
+  --text-primary: #223132;
+  --text-secondary: #526a6a;
+  --text-muted: #829594;
 
-  --accent-cyan: #5dd9c7;
-  --accent-amber: #f2b84b;
-  --accent-magenta: #dc5a82;
-  --accent-green: #8bd17c;
+  --accent-cyan: #3b9f96;
+  --accent-amber: #b87918;
+  --accent-magenta: #c65b78;
+  --accent-green: #4f9d62;
   --accent-gold: var(--accent-amber);
-  --accent-gold-dim: rgba(242, 184, 75, .16);
-  --accent-gold-glow: rgba(242, 184, 75, .38);
+  --accent-gold-dim: rgba(184, 121, 24, .18);
+  --accent-gold-glow: rgba(184, 121, 24, .24);
 
-  --user-bubble: #142427;
-  --user-border: #31565c;
-  --bot-bubble: #0f1a1c;
-  --bot-border: #253b40;
+  --user-bubble: #e4f4f1;
+  --user-border: #9dccca;
+  --bot-bubble: #ffffff;
+  --bot-border: #d4e4e0;
 
-  --font-display: "Segoe UI", Inter, system-ui, sans-serif;
+  --font-display: "Aptos Display", "Segoe UI", Inter, system-ui, sans-serif;
   --font-mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
 
   --radius-sm: 6px;
@@ -35,7 +35,7 @@
   --radius-lg: 8px;
   --radius-xl: 8px;
 
-  --shadow-card: 0 8px 40px rgba(0,0,0,0.5);
+  --shadow-card: 0 18px 60px rgba(46, 72, 72, 0.14);
   --transition-fast: 140ms cubic-bezier(.4,0,.2,1);
   --transition-med: 280ms cubic-bezier(.4,0,.2,1);
 }
@@ -68,15 +68,16 @@ html, body, #root {
   padding: 6px 14px;
   border-radius: 8px;
   border: none;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(46, 72, 72, 0.1);
   cursor: pointer;
   transition: background 0.3s ease, box-shadow 0.3s ease;
   line-height: 1;
 }
 .lang-toggle:hover {
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 20px rgba(93, 217, 199, 0.08);
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(46, 72, 72, 0.14);
 }
 .lang-toggle:active {
   transform: scale(0.96);
@@ -101,7 +102,7 @@ html, body, #root {
   font-weight: 700;
   color: var(--accent-cyan);
   transform: scale(1);
-  text-shadow: 0 0 12px rgba(93, 217, 199, .3);
+  text-shadow: none;
 }
 .lang-toggle__sep {
   font-family: var(--font-mono);

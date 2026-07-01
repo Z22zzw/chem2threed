@@ -7,7 +7,7 @@
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(93, 217, 199, .05), transparent 34%),
+    linear-gradient(180deg, rgba(59, 159, 150, .08), transparent 34%),
     var(--bg-surface);
   border-left: 1px solid var(--bg-border);
 }
@@ -51,7 +51,7 @@
   min-height: 32px;
   border-radius: 8px;
   border: 1px solid var(--bg-border);
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, .78);
   color: var(--text-secondary);
   padding: 7px 10px;
   font-family: var(--font-mono);
@@ -62,7 +62,7 @@
 .debugBtn:hover,
 .actions button:hover:not(:disabled) {
   color: var(--accent-cyan);
-  border-color: rgba(93, 217, 199, .45);
+  border-color: rgba(59, 159, 150, .45);
 }
 
 .actions button:disabled {
@@ -79,7 +79,7 @@
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255,255,255,.06);
+  background: #e8f1ef;
 }
 
 .progressTrack span {
@@ -124,7 +124,7 @@
   min-height: 320px;
   border: 1px solid var(--bg-border);
   border-radius: 8px;
-  background: #071012;
+  background: #fbfcfb;
 }
 
 .empty,
@@ -152,8 +152,8 @@
 
 .gridIcon span {
   border-radius: 7px;
-  border: 1px solid rgba(93, 217, 199, .28);
-  background: rgba(93, 217, 199, .08);
+  border: 1px solid rgba(59, 159, 150, .28);
+  background: rgba(59, 159, 150, .08);
 }
 
 .emptyTitle,
@@ -174,8 +174,8 @@
 }
 
 .errorBox {
-  border-color: rgba(220, 90, 130, .38);
-  background: rgba(220, 90, 130, .06);
+  border-color: rgba(198, 91, 120, .34);
+  background: rgba(198, 91, 120, .06);
 }
 
 .errorTitle {

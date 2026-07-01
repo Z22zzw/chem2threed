@@ -290,6 +290,7 @@ function buildPrompt(
     '- title、teachingGoal 使用中文，面向课堂教学。',
     '- visualStyle.colorScheme 只能是 cpk / soft / highContrast。',
     '- visualStyle.background 只能是 light / dark。',
+    '- 默认使用 visualStyle.background="light"，用于投影仪和课堂白底展示。',
     '- visualStyle.displayMode 只能是 ball_stick / space_filling / mixed。',
     '- interactions 至少包含 rotate 和 zoom，可加入 atom_label、bond_angle、key_note、animate。',
     '- molecule-3d 的 chemistry 必须包含 atoms 和 bonds。atoms 使用 { element, position:[x,y,z], label }，bonds 使用 { from, to, type }，下标从 0 开始。',
@@ -304,7 +305,7 @@ function buildPrompt(
     '- 坐标控制在 -5 到 5 范围内，原子数量优先保持在 80 个以内。',
     '',
     '返回 JSON 形状：',
-    '{"templateId":"","title":"","teachingGoal":"","language":"zh","visualStyle":{"colorScheme":"cpk","background":"dark","displayMode":"mixed"},"interactions":["rotate","zoom"],"chemistry":{}}',
+    '{"templateId":"","title":"","teachingGoal":"","language":"zh","visualStyle":{"colorScheme":"cpk","background":"light","displayMode":"mixed"},"interactions":["rotate","zoom"],"chemistry":{}}',
     '',
     `用户原始需求：${parsed.rawInput}`,
     `离线解析参考：${JSON.stringify({

@@ -16,13 +16,13 @@
   justify-content: center;
   gap: 10px;
   padding-bottom: 40px;
-  opacity: .45;
+  opacity: .72;
   animation: fadeUp .5s ease both;
 }
 .emptyIcon {
   font-size: 3rem;
   color: var(--accent-gold);
-  filter: drop-shadow(0 0 12px var(--accent-gold-glow));
+  filter: none;
 }
 .emptyTitle {
   font-family: var(--font-display);

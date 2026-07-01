@@ -110,19 +110,20 @@ function notFoundHtml(message: string): string {
       min-height: 100vh;
       display: grid;
       place-items: center;
-      background: #071012;
-      color: #f2fbf8;
+      background: #fbfcfb;
+      color: #223132;
       font-family: "Segoe UI", Arial, sans-serif;
     }
     main {
       width: min(520px, calc(100vw - 32px));
-      border: 1px solid rgba(97, 217, 198, 0.28);
+      border: 1px solid rgba(59, 159, 150, 0.24);
       border-radius: 8px;
       padding: 24px;
-      background: rgba(13, 22, 24, 0.82);
+      background: rgba(255, 255, 255, 0.88);
+      box-shadow: 0 18px 60px rgba(46, 72, 72, 0.14);
     }
     h1 { margin: 0 0 12px; font-size: 24px; }
-    p { margin: 0; color: #9db7b2; line-height: 1.7; }
+    p { margin: 0; color: #607675; line-height: 1.7; }
   </style>
 </head>
 <body>
