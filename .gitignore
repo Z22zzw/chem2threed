@@ -8,6 +8,9 @@ dist/
 # EdgeOne generated files
 .edgeone/
 .edgeone.zip
+.edgeone-local-store/
+.edgeone-dev*.log
+.playwright-cli/
 
 # Environment variables
 .env

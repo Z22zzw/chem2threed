@@ -13,7 +13,14 @@
  */
 
 import type {
+  AttachmentMeta,
+  ClarifyCard,
+  DeployDonePayload,
+  GenerationStatus,
   Message,
+  PreviewReadyPayload,
+  SceneErrorPayload,
+  SceneSpec,
   ListConversationsParams,
   ListConversationsResponse,
 } from './types';
@@ -21,6 +28,7 @@ import type {
 export const API = {
   chat: '/chat',
   chatStop: '/stop',                        // Abort the active agent run
+  upload: '/upload',                        // Upload image/file attachments
   history: '/history',                      // Get conversation history
   clearHistory: '/clear-history',           // Clear messages in a conversation
   conversations: '/conversations',          // List conversations for a user
@@ -39,7 +47,32 @@ export interface StreamCallbacks {
   onToolCalled: (toolName: string) => void;
   onDone: () => void;
   onError: (err: Error) => void;
+  onClarifyCard?: (card: ClarifyCard) => void;
+  onGenerationStatus?: (status: GenerationStatus) => void;
+  onSceneSpec?: (spec: SceneSpec) => void;
+  onPreviewReady?: (payload: PreviewReadyPayload) => void;
+  onDeploying?: (payload: { sceneId?: string; strategy?: string }) => void;
+  onDeployDone?: (payload: DeployDonePayload) => void;
+  onSceneError?: (payload: SceneErrorPayload) => void;
   onRawEvent?: (event: RawSseEvent) => void;
+}
+
+export interface SendMessageOptions {
+  userId?: string;
+  userMsgId?: string;
+  botMsgId?: string;
+  attachments?: AttachmentMeta[];
+  clarifySelections?: Record<string, string | string[] | boolean | number>;
+  generationMode?: 'clarify' | 'generate' | 'direct';
+}
+
+interface UploadRequest {
+  fileName: string;
+  mimeType: string;
+  size: number;
+  type: 'image' | 'file';
+  base64: string;
+  caption?: string;
 }
 
 /** Get conversation history for restoring the chat window after page refresh. */
@@ -89,7 +122,7 @@ export function sendMessageStream(
   message: string,
   callbacks: StreamCallbacks,
   conversationId?: string,
-  options?: { userId?: string; userMsgId?: string; botMsgId?: string },
+  options?: SendMessageOptions,
 ): AbortController {
   const ctrl = new AbortController();
 
@@ -113,6 +146,9 @@ export function sendMessageStream(
           userId: options?.userId,
           userMsgId: options?.userMsgId,
           botMsgId: options?.botMsgId,
+          attachments: options?.attachments,
+          clarifySelections: options?.clarifySelections,
+          generationMode: options?.generationMode,
         }),
         signal: ctrl.signal,
       });
@@ -197,6 +233,27 @@ function dispatchSseChunk(part: string, cb: StreamCallbacks, markDone: () => voi
       case 'tool_called':
         cb.onToolCalled(parsed.tool);
         break;
+      case 'clarify_card':
+        cb.onClarifyCard?.(parsed as ClarifyCard);
+        break;
+      case 'generation_status':
+        cb.onGenerationStatus?.(parsed as GenerationStatus);
+        break;
+      case 'scene_spec':
+        cb.onSceneSpec?.(parsed as SceneSpec);
+        break;
+      case 'preview_ready':
+        cb.onPreviewReady?.(parsed as PreviewReadyPayload);
+        break;
+      case 'deploying':
+        cb.onDeploying?.(parsed as { sceneId?: string; strategy?: string });
+        break;
+      case 'deploy_done':
+        cb.onDeployDone?.(parsed as DeployDonePayload);
+        break;
+      case 'scene_error':
+        cb.onSceneError?.(parsed as SceneErrorPayload);
+        break;
       case 'error':
         cb.onError(new Error(parsed.message || 'agent returned error'));
         break;
@@ -215,6 +272,35 @@ function dispatchSseChunk(part: string, cb: StreamCallbacks, markDone: () => voi
       });
     }
   }
+}
+
+export async function uploadAttachment(request: UploadRequest): Promise<AttachmentMeta> {
+  const res = await fetch(API.upload, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(request),
+  });
+
+  const data = await res.json().catch(() => null) as Partial<AttachmentMeta> & {
+    status?: string;
+    message?: string;
+  } | null;
+
+  if (!res.ok || !data || data.status === 'error') {
+    throw new Error(data?.message || `Upload failed: HTTP ${res.status}`);
+  }
+
+  return {
+    id: String(data.id || crypto.randomUUID()),
+    type: data.type === 'image' ? 'image' : 'file',
+    fileName: String(data.fileName || request.fileName),
+    mimeType: String(data.mimeType || request.mimeType),
+    size: Number(data.size || request.size),
+    caption: data.caption || request.caption,
+    extractedText: data.extractedText,
+    summary: data.summary,
+    error: data.error,
+  };
 }
 
 /**

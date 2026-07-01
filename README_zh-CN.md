@@ -1,86 +1,53 @@
-# OpenAI Agents Starter
+# ChemScene Agent
 
-跑在 EdgeOne Makers 上的全栈 Agent 模板：基于 OpenAI Agents SDK（TypeScript）的流式聊天，包含自定义工具与基于 `context.store` 的会话记忆。
+基于 EdgeOne Makers 和 OpenAI Agents SDK 的化学 3D 教学建模智能体。教师输入文字、图片或教案文件后，系统通过可选追问卡片确认展示细节，生成可交互的 Three.js 单页 3D 教学场景，并在右侧实时预览。
 
-**Framework：** OpenAI Agents SDK · **Category：** Quick Start <!-- TODO: confirm --> · **Language：** TypeScript
+## 功能
 
-[![Deploy to EdgeOne Makers](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://console.cloud.tencent.com/edgeone/pages/new?template=openai-agents-starter-node)
-
-<!-- ![preview](./assets/preview.png)  TODO: confirm -->
-
-## 概述
-
-一个把 `@openai/agents` 接到 EdgeOne Makers 上的最小但贴近生产形态的模板。完整跑通了流式响应、自定义工具注册、会话存储这条链路，方便你直接 fork，把示例工具（`get_weather`、`get_clothing_advice`、`translate_text`、`text_statistics`）替换成你自己的实现。
-
-- **SSE 流式聊天** —— 逐 token 推 `text_delta`，命中工具时推 `tool_called`。
-- **自定义 Agent 工具** —— `createTools()` 注册的四个示例工具，可直接换成你自己的业务工具。
-- **会话粘性记忆** —— `context.store.openaiSession(conversationId)` 直接喂给 SDK 的 `session` 参数。
-- **双重取消** —— 前端 `AbortController` + 后端 `AbortSignal`，可中途打断 LLM。
-- **后端拆两层** —— 有状态的长连接放 `agents/`，无状态的 `/history` 放 `cloud-functions/`。
-
-## 环境变量
-
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `AI_GATEWAY_API_KEY` | 是 | 模型网关 API Key。可填 Makers Models 的 API Key，也可以是任意 OpenAI 兼容服务商的 Key。 |
-| `AI_GATEWAY_BASE_URL` | 是 | 网关 Base URL。Makers Models 请使用 `https://ai-gateway.edgeone.link/v1`。 |
-| `AI_GATEWAY_MODEL` | 否 | 模型 ID。默认 `@makers/deepseek-v4-flash`（内置免费模型）。 |
-
-模板遵循 OpenAI 兼容协议，可以指向 Makers Models，也可以指向任意 OpenAI 兼容的服务商。
-
-### 如何获取 `AI_GATEWAY_API_KEY`
-
-1. 打开 [Makers 控制台](https://console.cloud.tencent.com/edgeone/makers)。
-2. 登录并开通 Makers。
-3. 进入 **Makers → Models → API Key**，新建一个 Key。
-4. 把它粘到 `AI_GATEWAY_API_KEY`。
-
-内置的 `@makers/deepseek-v4-flash` 免费但有用量限制，适合验证；生产建议自行绑定付费厂商（BYOK）。
+- 文字、图片、PDF、TXT、DOCX 多模态输入。
+- 选项式追问卡片：所有问题都有默认值，可直接生成。
+- 6 类教学模板：分子结构、反应过程、晶体结构、电子轨道、化工设备、实验装置。
+- Three.js 单文件 HTML 渲染，支持旋转、缩放、标签、动画和下载。
+- EdgeOne Makers SSE 流式状态、工具指示灯和停止生成。
+- 生成后返回 `/scene?...` 场景链接；本地无 Blob/Store 权限时右侧预览仍可用。
 
 ## 本地开发
 
-前置依赖：Node.js ≥ 18，已安装 EdgeOne CLI（`npm i -g edgeone`）。
-
 ```bash
 npm install
-cp .env.example .env       # 然后填入 AI_GATEWAY_API_KEY / AI_GATEWAY_BASE_URL
-edgeone makers dev
+edgeone makers dev --name chemscene-agent --skip-env-sync
 ```
 
-本地观测面板：`http://localhost:8080/agent-metrics`。
+如需指定端口：
 
-## 项目结构
+```bash
+edgeone makers dev --name chemscene-agent --skip-env-sync --port 8095
+```
+
+## 构建
+
+```bash
+npm run build
+```
+
+## 目录
 
 ```text
-openAI-agent-starter/
-├── agents/                          # 有状态的 EdgeOne Makers Agent Functions（Node/TS）
-│   ├── chat/index.ts               # POST /chat —— SSE 流式聊天
-│   ├── stop/index.ts               # POST /stop —— 中断当前 agent
-│   ├── _logger.ts                  # 日志工具（私有）
-│   ├── _sse.ts                     # SSE 工具（私有）
-│   └── _tools.ts                   # Agent 工具定义（私有）
-├── cloud-functions/                 # 无状态的 EdgeOne Makers Node Functions
-│   ├── history/index.ts            # POST /history —— 拉取对话消息
-│   └── _logger.ts                  # 日志工具
-├── src/                             # React + Vite + TypeScript 前端
-│   ├── App.tsx                     # 主应用 + SSE 流生命周期管理
-│   ├── api.ts                      # /chat、/stop、/history 接口封装
-│   └── components/                 # ChatWindow、ChatInput、CodeViewer、ToolIndicators 等
-├── package.json                     # 含 @openai/agents
-├── edgeone.json                     # framework=openai-agents-sdk
-├── vite.config.ts
-├── tsconfig.json
-└── .gitignore
+agents/
+  chat/index.ts        # 主 SSE Agent 入口
+  _chemScene.ts        # 化学解析、模板匹配、Scene Spec、Three.js HTML 渲染
+  _tools.ts            # ChemScene Agent 工具注册
+cloud-functions/
+  upload/index.ts      # 附件上传和文本提取
+  scene/index.ts       # 公开场景 HTML 路由
+  scene-feedback/      # 重新生成反馈入口
+src/
+  components/
+    ChatInput.tsx
+    ClarifyCard.tsx
+    ScenePreviewPanel.tsx
 ```
 
-> 以 `_` 开头的文件是私有模块，不会暴露为公开路由。
+## 注意
 
-## 资源
-
-- [EdgeOne Makers Agents 文档](https://cloud.tencent.com/document/product/1552/132759)
-- [EdgeOne Makers 快速开始](https://cloud.tencent.com/document/product/1552/132786)
-- [Makers Models](https://cloud.tencent.com/document/product/1552/132748)
-
-## License
-
-MIT.
+场景生成会优先调用 OpenAI-compatible 模型生成结构化 Scene Spec，再由 Three.js 渲染器生成可交互 HTML。请在 `.env` 中配置 `AI_GATEWAY_API_KEY`、`AI_GATEWAY_BASE_URL`，可选配置 `AI_GATEWAY_MODEL`；也兼容 `OPENAI_API_KEY`、`OPENAI_BASE_URL`、`OPENAI_MODEL`。当模型端点不可用时，系统会降级到本地化学模板，保证预览和下载流程仍可使用。`/scene` 持久链接依赖 EdgeOne Makers Store/Blob 权限，本地账号未开通相关能力时会使用本地兜底存储。

@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type {
+  AttachmentMeta,
+  ClarifyCard,
+  DeployDonePayload,
+  GenerationStatus,
   Message,
+  PreviewReadyPayload,
+  SceneErrorPayload,
+  SceneSpec,
   ToolLampState,
   ConversationSummary,
 } from './types';
@@ -16,26 +23,38 @@ import ToolIndicators from './components/ToolIndicators';
 import ChatWindow from './components/ChatWindow';
 import ChatInput from './components/ChatInput';
 import DebugPanel from './components/DebugPanel';
-import CodeViewer from './components/CodeViewer';
+import ScenePreviewPanel from './components/ScenePreviewPanel';
 import ConversationSidebar from './components/ConversationSidebar';
-import GitHubLink from './components/GitHubLink';
-import DeployLink from './components/DeployLink';
 import { I18nProvider, LangToggle, useT, MessageKeys } from './i18n';
 import { deleteSnapshot, loadSnapshot, saveSnapshot } from './lib/chatUiStore';
 import styles from './App.module.css';
 
-const LAMP_IDS = ['get_weather', 'get_clothing_advice', 'translate_text', 'text_statistics'] as const;
+const LAMP_IDS = [
+  'parse_chem_request',
+  'analyze_attachment',
+  'create_clarify_card',
+  'match_scene_template',
+  'generate_scene_spec',
+  'render_threejs_html',
+  'deploy_scene_to_edgeone',
+] as const;
 const LAMP_ICONS: Record<string, string> = {
-  get_weather: '☀️',
-  get_clothing_advice: '👔',
-  translate_text: '🌐',
-  text_statistics: '📊',
+  parse_chem_request: 'IN',
+  analyze_attachment: 'AT',
+  create_clarify_card: 'Q',
+  match_scene_template: 'TP',
+  generate_scene_spec: 'SP',
+  render_threejs_html: '3D',
+  deploy_scene_to_edgeone: 'URL',
 };
 const LAMP_I18N_KEYS: Record<string, string> = {
-  get_weather: 'tool.weather',
-  get_clothing_advice: 'tool.clothing',
-  translate_text: 'tool.translate',
-  text_statistics: 'tool.statistics',
+  parse_chem_request: 'tool.parse',
+  analyze_attachment: 'tool.attachment',
+  create_clarify_card: 'tool.clarify',
+  match_scene_template: 'tool.template',
+  generate_scene_spec: 'tool.spec',
+  render_threejs_html: 'tool.render',
+  deploy_scene_to_edgeone: 'tool.deploy',
 };
 
 const CONVERSATION_ID_STORAGE_KEY = 'eo_conversation_id';
@@ -103,7 +122,13 @@ function AppInner() {
   const [loading, setLoading]   = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [debugEvents, setDebugEvents] = useState<RawSseEvent[]>([]);
-  const [rightPanelMode, setRightPanelMode] = useState<'code' | 'debug'>('code');
+  const [rightPanelMode, setRightPanelMode] = useState<'preview' | 'debug'>('preview');
+  const [generationStatus, setGenerationStatus] = useState<GenerationStatus | undefined>(undefined);
+  const [sceneSpec, setSceneSpec] = useState<SceneSpec | undefined>(undefined);
+  const [preview, setPreview] = useState<PreviewReadyPayload | undefined>(undefined);
+  const [deployResult, setDeployResult] = useState<DeployDonePayload | undefined>(undefined);
+  const [sceneError, setSceneError] = useState<SceneErrorPayload | undefined>(undefined);
+  const [deploying, setDeploying] = useState(false);
 
   // Conversation list (sidebar) state
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -119,6 +144,8 @@ function AppInner() {
   const eoUuidRef = useRef<string>(getOrCreateEoUuid());
   const initDoneRef = useRef(false);
   const snapshotTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastGenerationPromptRef = useRef('');
+  const lastGenerationAttachmentsRef = useRef<AttachmentMeta[]>([]);
 
   // Keep conversationIdRef in sync with the activeConversationId state.
   useEffect(() => {
@@ -281,15 +308,34 @@ function AppInner() {
     abortCtrlRef.current = null;
   }, []);
 
-  const handleSend = useCallback(async (text: string) => {
+  const handleSend = useCallback(async (
+    text: string,
+    attachments: AttachmentMeta[] = [],
+    streamOptions?: {
+      clarifySelections?: Record<string, string | string[] | boolean | number>;
+      generationMode?: 'clarify' | 'generate' | 'direct';
+    },
+  ) => {
     initDoneRef.current = true;
-    setRightPanelMode('debug');
+    setRightPanelMode('preview');
+    setSceneError(undefined);
+    setDeploying(false);
+    setGenerationStatus(undefined);
+    setSceneSpec(undefined);
+    setPreview(undefined);
+    setDeployResult(undefined);
+
+    if (!streamOptions?.clarifySelections && streamOptions?.generationMode !== 'generate') {
+      lastGenerationPromptRef.current = text;
+      lastGenerationAttachmentsRef.current = attachments;
+    }
 
     const userMsg: Message = {
       id: crypto.randomUUID(),
       role: 'user',
       content: text,
       timestamp: Date.now(),
+      attachments,
     };
 
     const botMsgId = crypto.randomUUID();
@@ -376,7 +422,6 @@ function AppInner() {
         // hundreds of one-token rows.
         if (event.eventType === 'text_delta') {
           const delta = (event.data as { delta?: string } | null)?.delta ?? '';
-          setRightPanelMode('debug');
           setDebugEvents(prev => {
             const last = prev[prev.length - 1];
             if (last && last.eventType === 'text_delta') {
@@ -393,8 +438,50 @@ function AppInner() {
           });
           return;
         }
-        setRightPanelMode('debug');
         setDebugEvents(prev => [...prev, event]);
+      },
+
+      onClarifyCard(card: ClarifyCard) {
+        updateBotMessage(content => content);
+        setMessages(prev =>
+          prev.map(m =>
+            m.id === botMsgIdRef.current
+              ? { ...m, clarifyCard: card }
+              : m
+          )
+        );
+      },
+
+      onGenerationStatus(status) {
+        setGenerationStatus(status);
+        setRightPanelMode('preview');
+      },
+
+      onSceneSpec(spec) {
+        setSceneSpec(spec);
+      },
+
+      onPreviewReady(payload) {
+        setPreview(payload);
+        setDeployResult(undefined);
+        setSceneError(undefined);
+        setRightPanelMode('preview');
+      },
+
+      onDeploying() {
+        setDeploying(true);
+        setRightPanelMode('preview');
+      },
+
+      onDeployDone(payload) {
+        setDeploying(false);
+        setDeployResult(payload);
+        setRightPanelMode('preview');
+      },
+
+      onSceneError(payload) {
+        setSceneError(payload);
+        setRightPanelMode('preview');
       },
 
       onDone() {
@@ -408,16 +495,46 @@ function AppInner() {
       onError() {
         clearBotStreaming();
         updateBotMessage(content => content || t("status.error"));
+        setSceneError({ message: t("status.error") });
         finishStream();
       },
     }, conversationIdRef.current, {
       userId: eoUuidRef.current,
       userMsgId: userMsg.id,
       botMsgId,
+      attachments,
+      clarifySelections: streamOptions?.clarifySelections,
+      generationMode: streamOptions?.generationMode,
     });
 
     abortCtrlRef.current = ctrl;
   }, [updateBotMessage, clearBotStreaming, finishStream, refreshConversations, t]);
+
+  const handleClarifySubmit = useCallback((values: Record<string, string | string[] | boolean | number>) => {
+    if (loading) return;
+    const prompt = lastGenerationPromptRef.current || t('preset.1');
+    void handleSend(`${prompt}\n\n按我选择的选项生成。`, lastGenerationAttachmentsRef.current, {
+      clarifySelections: values,
+      generationMode: 'generate',
+    });
+  }, [handleSend, loading, t]);
+
+  const handleClarifyDirect = useCallback((values: Record<string, string | string[] | boolean | number>) => {
+    if (loading) return;
+    const prompt = lastGenerationPromptRef.current || t('preset.1');
+    void handleSend(`${prompt}\n\n直接生成，使用默认选项。`, lastGenerationAttachmentsRef.current, {
+      clarifySelections: values,
+      generationMode: 'direct',
+    });
+  }, [handleSend, loading, t]);
+
+  const handleRegenerate = useCallback(() => {
+    if (loading) return;
+    const prompt = lastGenerationPromptRef.current || preview?.title || t('preset.1');
+    void handleSend(`${prompt}\n\n请重新生成一个更适合课堂演示的版本。`, lastGenerationAttachmentsRef.current, {
+      generationMode: 'generate',
+    });
+  }, [handleSend, loading, preview?.title, t]);
 
   const handleClearHistory = useCallback(() => {
     const oldConvId = conversationIdRef.current;
@@ -456,7 +573,12 @@ function AppInner() {
     setActiveConversationId(newId);
     setMessages([]);
     setDebugEvents([]);
-    setRightPanelMode('code');
+    setRightPanelMode('preview');
+    setGenerationStatus(undefined);
+    setSceneSpec(undefined);
+    setPreview(undefined);
+    setDeployResult(undefined);
+    setSceneError(undefined);
     setLoading(false);
     initDoneRef.current = false;
   }, [refreshConversations]);
@@ -488,7 +610,7 @@ function AppInner() {
     localStorage.setItem(CONVERSATION_ID_STORAGE_KEY, id);
     conversationIdRef.current = id;
     setActiveConversationId(id);
-    setRightPanelMode('code');
+    setRightPanelMode('preview');
     void loadConversation(id);
   }, [loading, loadConversation]);
 
@@ -502,7 +624,12 @@ function AppInner() {
     setActiveConversationId(newId);
     setMessages([]);
     setDebugEvents([]);
-    setRightPanelMode('code');
+    setRightPanelMode('preview');
+    setGenerationStatus(undefined);
+    setSceneSpec(undefined);
+    setPreview(undefined);
+    setDeployResult(undefined);
+    setSceneError(undefined);
     initDoneRef.current = false;
     setHistoryLoading(false);
   }, [loading]);
@@ -538,7 +665,12 @@ function AppInner() {
       setActiveConversationId(newId);
       setMessages([]);
       setDebugEvents([]);
-      setRightPanelMode('code');
+      setRightPanelMode('preview');
+      setGenerationStatus(undefined);
+      setSceneSpec(undefined);
+      setPreview(undefined);
+      setDeployResult(undefined);
+      setSceneError(undefined);
       initDoneRef.current = false;
       setHistoryLoading(false);
     }
@@ -554,9 +686,6 @@ function AppInner() {
 
   return (
     <div className={styles.shell}>
-      <div className={styles.blob1} />
-      <div className={styles.blob2} />
-
       <div className={styles.stage}>
         <ConversationSidebar
           conversations={conversations}
@@ -584,7 +713,12 @@ function AppInner() {
           </header>
 
           <div className={styles.chatWindowShell}>
-            <ChatWindow messages={messages} loading={loading} />
+            <ChatWindow
+              messages={messages}
+              loading={loading}
+              onClarifySubmit={handleClarifySubmit}
+              onClarifyDirect={handleClarifyDirect}
+            />
             {historyLoading && messages.length === 0 && (
               <div className={styles.historyOverlay}>
                 <div className={styles.historySpinner} />
@@ -595,15 +729,26 @@ function AppInner() {
         </div>
 
         <div className={styles.codePanel}>
-          {rightPanelMode === 'code' ? (
-            <CodeViewer />
+          {rightPanelMode === 'debug' ? (
+            <DebugPanel
+              events={debugEvents}
+              onClear={() => setDebugEvents([])}
+              onBack={() => setRightPanelMode('preview')}
+            />
           ) : (
-            <DebugPanel events={debugEvents} onClear={() => setDebugEvents([])} />
+            <ScenePreviewPanel
+              status={generationStatus}
+              preview={preview}
+              deploy={deployResult}
+              sceneSpec={sceneSpec}
+              error={sceneError}
+              deploying={deploying}
+              onShowDebug={() => setRightPanelMode('debug')}
+              onRegenerate={handleRegenerate}
+            />
           )}
         </div>
       </div>
-      <GitHubLink />
-      <DeployLink />
     </div>
   );
 }

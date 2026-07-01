@@ -26,6 +26,7 @@
  */
 
 import { createLogger } from '../_logger';
+import { listLocalConversations } from '../../agents/_localStore';
 
 const logger = createLogger('conversations');
 
@@ -317,6 +318,14 @@ export async function onRequestPost(context: any): Promise<Response> {
     }
     const duplicatesDropped = normalized.length - conversations.length;
 
+    if (conversations.length === 0) {
+      const local = listLocalConversations({ userId, limit, order, after, before });
+      if (local.conversations.length > 0) {
+        logger.log(`[conversations] using local fallback count=${local.conversations.length}`);
+        return jsonResponse({ ...local, fallback: 'local' });
+      }
+    }
+
     const nextCursor = pickCursor(result, 'nextCursor', 'next_cursor');
     const previousCursor = pickCursor(result, 'previousCursor', 'previous_cursor', 'prevCursor', 'prev_cursor');
 
@@ -331,11 +340,16 @@ export async function onRequestPost(context: any): Promise<Response> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error('failed to list conversations:', e);
+    const local = listLocalConversations({ userId, limit, order, after, before });
+    if (local.conversations.length > 0) {
+      logger.log(`[conversations] local fallback success count=${local.conversations.length}`);
+      return jsonResponse({ ...local, fallback: 'local' });
+    }
     logger.log(`[conversations] end: ${new Date().toISOString()}, total: ${Date.now() - startTime}ms`);
     return jsonResponse({
-      status: 'error',
+      status: 'store_unavailable',
       message,
       conversations: [],
-    }, 500);
+    });
   }
 }

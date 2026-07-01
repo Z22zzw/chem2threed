@@ -309,3 +309,9 @@
     -webkit-line-clamp: 1;
   }
 }
+
+@media (max-width: 640px) {
+  .sidebar {
+    display: none;
+  }
+}

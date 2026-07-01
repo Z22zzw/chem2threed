@@ -7,7 +7,7 @@
  * Usage:
  *   return sseResponse(async function* () {
  *     yield { event: 'text_delta', data: { delta: '...' } };
- *     yield { event: 'tool_called', data: { tool: 'get_weather' } };
+ *     yield { event: 'tool_called', data: { tool: 'parse_chem_request' } };
  *   }, { signal: context.request.signal });
  */
 
@@ -76,7 +76,7 @@ export function sseResponse(
             stopped = true;
             break;
           }
-          enqueue(next.value);
+          enqueue(next.value as SseEvent);
           next = await iter.next();
         }
       } catch (e: unknown) {

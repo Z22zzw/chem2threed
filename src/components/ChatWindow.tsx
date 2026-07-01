@@ -7,9 +7,16 @@ import styles from './ChatWindow.module.css';
 interface Props {
   messages: Message[];
   loading: boolean;
+  onClarifySubmit?: (values: Record<string, string | string[] | boolean | number>) => void;
+  onClarifyDirect?: (values: Record<string, string | string[] | boolean | number>) => void;
 }
 
-export default function ChatWindow({ messages, loading }: Props) {
+export default function ChatWindow({
+  messages,
+  loading,
+  onClarifySubmit,
+  onClarifyDirect,
+}: Props) {
   const { t } = useT();
   const windowRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +52,13 @@ export default function ChatWindow({ messages, loading }: Props) {
       )}
 
       {messages.map(msg => (
-        <ChatBubble key={msg.id} message={msg} />
+        <ChatBubble
+          key={msg.id}
+          message={msg}
+          disabled={loading}
+          onClarifySubmit={onClarifySubmit}
+          onClarifyDirect={onClarifyDirect}
+        />
       ))}
 
       {showTypingIndicator && (

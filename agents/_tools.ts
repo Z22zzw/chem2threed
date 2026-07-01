@@ -1,110 +1,141 @@
 /**
- * Agent Tools — private module (starts with _), not mapped as a route.
+ * ChemScene Agent tools.
  *
- * All tool definitions live here. Each tool's `execute` body is the only
- * thing you need to change when swapping mock data for a real implementation
- * (e.g. calling a weather API, a translation service, etc.).
+ * The runtime chat handler now uses model-generated Scene Spec output first,
+ * with local scene functions as validation and fallback helpers. These tools
+ * are kept for OpenAI Agents SDK compatibility and future orchestration.
  */
 
 import { tool } from '@openai/agents';
 import { z } from 'zod';
+import {
+  buildSceneSpec,
+  createClarifyCard,
+  parseChemRequest,
+  renderThreeJsHtml,
+} from './_chemScene';
 
-// ========== Tool: Get Weather ==========
-const getWeather = tool({
-  name: 'get_weather',
-  description:
-    'Fetch the current weather for one specific city. ' +
-    'This tool ONLY returns weather data — it does NOT give clothing advice. ' +
-    'When the user asks "what should I wear in <city>", call this tool first to get the ' +
-    'weather, then call `get_clothing_advice` separately, passing the JSON returned here.',
+const attachmentSchema = z.object({
+  id: z.string().optional(),
+  type: z.string().optional(),
+  fileName: z.string().optional(),
+  mimeType: z.string().optional(),
+  size: z.number().optional(),
+  caption: z.string().optional(),
+  extractedText: z.string().optional(),
+  summary: z.string().optional(),
+  error: z.string().optional(),
+});
+
+const parseChemRequestTool = tool({
+  name: 'parse_chem_request',
+  description: '解析化学教学建模需求，提取建模对象、知识点、教学目标和推荐模板。',
   parameters: z.object({
-    city: z.string().describe('The city to get weather for'),
+    rawInput: z.string().describe('用户原始输入'),
+    attachments: z.array(attachmentSchema).default([]).describe('已经上传并解析的附件摘要'),
   }),
-  execute: async ({ city }) => {
-    // TODO: Replace with real weather API (e.g. OpenWeatherMap, wttr.in)
-    const mockWeather = {
-      city,
-      condition: 'Sunny',
-      temperature: { min: 18, max: 25, unit: '°C' },
-      wind: 'Light breeze',
-    };
-    return JSON.stringify(mockWeather);
+  execute: async ({ rawInput, attachments }) =>
+    JSON.stringify(parseChemRequest(rawInput, attachments)),
+});
+
+const analyzeAttachmentTool = tool({
+  name: 'analyze_attachment',
+  description: '整理图片或文件附件中的化学线索。图片解析依赖上游 Vision 模型或用户说明。',
+  parameters: z.object({
+    attachments: z.array(attachmentSchema).default([]),
+  }),
+  execute: async ({ attachments }) => {
+    const summary = attachments.map((item) => ({
+      fileName: item.fileName,
+      type: item.type,
+      summary: item.summary || item.extractedText || item.caption || '已接收附件，等待结合用户文字分析。',
+      error: item.error,
+    }));
+    return JSON.stringify({ attachments: summary });
   },
 });
 
-// ========== Tool: Get Clothing Advice ==========
-const getClothingAdvice = tool({
-  name: 'get_clothing_advice',
-  description:
-    'Give clothing advice based on a weather description that the caller already has. ' +
-    'This tool does NOT fetch weather itself — call `get_weather` first if the user asks ' +
-    'about a specific city, then pass the resulting JSON (or any plain-text weather summary) ' +
-    'into this tool\'s `weather` parameter. ' +
-    'Important: this is a separate tool from `get_weather`. There is no combined ' +
-    '"get_clothing_weather" tool — the two must be invoked one after the other.',
+const createClarifyCardTool = tool({
+  name: 'create_clarify_card',
+  description: '根据解析结果生成选项式追问卡片。所有问题必须可选并提供默认值。',
   parameters: z.object({
-    weather: z.string().describe('The weather description (JSON or plain text)'),
+    rawInput: z.string(),
+    attachments: z.array(attachmentSchema).default([]),
   }),
-  execute: async ({ weather }) => {
-    // TODO: Replace with more sophisticated logic or an external service
-    // Basic temperature-aware advice based on input
-    const cold = /(-\d|[0-9](?=\s*°))/;
-    const hot = /(3[0-9]|4[0-9])\s*°/;
+  execute: async ({ rawInput, attachments }) =>
+    JSON.stringify(createClarifyCard(parseChemRequest(rawInput, attachments))),
+});
 
-    if (hot.test(weather)) {
-      return 'Hot weather — wear short sleeves, shorts, and stay hydrated.';
-    }
-    if (cold.test(weather)) {
-      return 'Cold weather — wear a down jacket or heavy coat with scarf and gloves.';
-    }
-    return 'Moderate weather — a light jacket with casual pants and sneakers works well.';
+const matchSceneTemplateTool = tool({
+  name: 'match_scene_template',
+  description: '从 6 类化学 3D 场景模板中选择最合适模板。',
+  parameters: z.object({
+    rawInput: z.string(),
+    attachments: z.array(attachmentSchema).default([]),
+  }),
+  execute: async ({ rawInput, attachments }) => {
+    const parsed = parseChemRequest(rawInput, attachments);
+    return JSON.stringify({
+      templateId: parsed.templateId,
+      reason: `根据“${parsed.modelingObject}”和“${parsed.knowledgePoint}”匹配。`,
+      confidence: parsed.confidence,
+    });
   },
 });
 
-// ========== Tool: Translate Text ==========
-const translateText = tool({
-  name: 'translate_text',
-  description: 'Translate text to the specified language.',
+const generateSceneSpecTool = tool({
+  name: 'generate_scene_spec',
+  description: '生成结构化 Scene Spec，用于稳定渲染 Three.js 页面。',
   parameters: z.object({
-    text: z.string().describe('The text to translate'),
-    target_language: z.string().describe('Target language code, e.g. en, ja, fr, ko, de'),
+    rawInput: z.string(),
+    attachments: z.array(attachmentSchema).default([]),
+    selections: z.record(z.string(), z.unknown()).default({}),
   }),
-  execute: async ({ text, target_language }) => {
-    // TODO: Replace with real translation API (e.g. DeepL, Google Translate)
-    const languageNames: Record<string, string> = {
-      en: 'English',
-      ja: '日本語',
-      fr: 'Français',
-      ko: '한국어',
-      de: 'Deutsch',
-      es: 'Español',
-      ru: 'Русский',
-    };
-    const langName = languageNames[target_language] ?? target_language;
-    return `[Mock translation to ${langName}]: ${text}`;
+  execute: async ({ rawInput, attachments, selections }) =>
+    JSON.stringify(buildSceneSpec(parseChemRequest(rawInput, attachments), selections)),
+});
+
+const renderThreeJsHtmlTool = tool({
+  name: 'render_threejs_html',
+  description: '根据 Scene Spec 渲染单文件 Three.js HTML。',
+  parameters: z.object({
+    sceneSpec: z.record(z.string(), z.unknown()),
+  }),
+  execute: async ({ sceneSpec }) => {
+    const htmlContent = renderThreeJsHtml(sceneSpec as any);
+    return JSON.stringify({
+      sceneId: String(sceneSpec.sceneId ?? ''),
+      htmlContent,
+      bytes: htmlContent.length,
+    });
   },
 });
 
-// ========== Tool: Text Statistics ==========
-const textStatistics = tool({
-  name: 'text_statistics',
-  description: 'Analyze text and return statistics like character count and word count.',
+const deploySceneToEdgeOneTool = tool({
+  name: 'deploy_scene_to_edgeone',
+  description: '发布生成场景。当前模板通过同一 EdgeOne 应用的 /scene 公开路由发布场景。',
   parameters: z.object({
-    text: z.string().describe('The text to analyze'),
+    sceneId: z.string(),
+    sceneUrl: z.string(),
   }),
-  execute: async ({ text }) => {
-    const charCount = text.length;
-    const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
-    const lineCount = text.split('\n').length;
-    return JSON.stringify({ charCount, wordCount, lineCount });
-  },
+  execute: async ({ sceneId, sceneUrl }) =>
+    JSON.stringify({
+      success: true,
+      sceneId,
+      url: sceneUrl,
+      strategy: 'edgeone-app-scene-route',
+      deployedAt: new Date().toISOString(),
+    }),
 });
 
-// ========== Export ==========
-/**
- * Factory that returns all available tools.
- * Add new tools to this array — the agent will automatically pick them up.
- */
 export function createTools() {
-  return [getWeather, getClothingAdvice, translateText, textStatistics];
+  return [
+    parseChemRequestTool,
+    analyzeAttachmentTool,
+    createClarifyCardTool,
+    matchSceneTemplateTool,
+    generateSceneSpecTool,
+    renderThreeJsHtmlTool,
+    deploySceneToEdgeOneTool,
+  ];
 }

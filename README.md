@@ -1,86 +1,46 @@
-# OpenAI Agents Starter
+# ChemScene Agent
 
-A full-stack EdgeOne Makers Agent template — streaming chat backed by the OpenAI Agents SDK (TypeScript), with custom tools and `context.store`-backed conversation memory.
+A chemistry 3D teaching-scene agent built on EdgeOne Makers and the OpenAI Agents SDK runtime. Teachers can describe a molecule, reaction, crystal, orbital, process equipment, or lab apparatus; the app asks optional spec-card questions, then renders an interactive Three.js HTML scene with live preview.
 
-**Framework:** OpenAI Agents SDK · **Category:** Quick Start <!-- TODO: confirm --> · **Language:** TypeScript
+## Features
 
-[![Deploy to EdgeOne Makers](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://edgeone.ai/makers/new?template=openai-agents-starter-node&from=within&fromAgent=1&agentLang=typescript)
+- Text, image, PDF, TXT, and DOCX inputs.
+- Optional clarification cards with defaults and direct-generation flow.
+- Model-generated Scene Spec with six renderer families: molecule, reaction, crystal, orbital, equipment, apparatus.
+- Single-file Three.js HTML output with orbit controls, labels, animation, preview, and download.
+- EdgeOne Makers SSE status events, tool indicators, stop generation, and scene links.
+- `/scene?...` public scene route when Makers Store/Blob is available; iframe preview remains available locally.
 
-<!-- ![preview](./assets/preview.png)  TODO: confirm -->
-
-## Overview
-
-A minimal, production-shaped starter that wires `@openai/agents` into EdgeOne Makers. Demonstrates the full chat loop — SSE streaming, custom tool registration, conversation persistence — so you can fork it and start replacing the toy tools (`get_weather`, `get_clothing_advice`, `translate_text`, `text_statistics`) with real ones.
-
-- **SSE streaming chat** — token-by-token `text_delta` events plus `tool_called` events.
-- **Custom Agent tools** — four sample tools registered via `createTools()`, ready to be replaced with your own.
-- **Sticky conversation memory** — `context.store.openaiSession(conversationId)` plugs straight into the SDK's `session` parameter.
-- **Dual cancellation** — frontend `AbortController` plus backend `AbortSignal` interrupts the LLM call mid-stream.
-- **Two-folder backend** — long-running stateful work in `agents/`, short stateless `/history` in `cloud-functions/`.
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `AI_GATEWAY_API_KEY` | Yes | Model gateway API key. Use your Makers Models API Key, or any OpenAI-compatible provider key. |
-| `AI_GATEWAY_BASE_URL` | Yes | Gateway base URL. For Makers Models, use `https://ai-gateway.edgeone.link/v1`. |
-| `AI_GATEWAY_MODEL` | No | Model ID. Defaults to `@makers/deepseek-v4-flash` (a free built-in model). |
-
-This template follows the OpenAI-compatible standard — point these at Makers Models or any compatible provider.
-
-### How to get `AI_GATEWAY_API_KEY`
-
-1. Open the [Makers Console](https://edgeone.ai/makers/new?s_url=https://console.tencentcloud.com/edgeone/makers).
-2. Sign in and enable Makers.
-3. Go to **Makers → Models → API Key** and create a key.
-4. Copy it into `AI_GATEWAY_API_KEY`.
-
-The built-in `@makers/deepseek-v4-flash` model is free with a usage cap and is suitable for prototyping. For production, bind your own paid provider (BYOK).
-
-## Local Development
-
-Prerequisites: Node.js ≥ 18 and the EdgeOne CLI (`npm i -g edgeone`).
+## Development
 
 ```bash
 npm install
-cp .env.example .env       # then fill in AI_GATEWAY_API_KEY / AI_GATEWAY_BASE_URL
-edgeone makers dev
+edgeone makers dev --name chemscene-agent --skip-env-sync
 ```
 
-Local agent metrics & traces are exposed at `http://localhost:8080/agent-metrics`.
+With a fixed local port:
 
-## Project Structure
+```bash
+edgeone makers dev --name chemscene-agent --skip-env-sync --port 8095
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+## Key Files
 
 ```text
-openAI-agent-starter/
-├── agents/                          # Stateful EdgeOne Makers Agent Functions (Node/TS)
-│   ├── chat/index.ts               # POST /chat — SSE streaming chat
-│   ├── stop/index.ts               # POST /stop — abort active agent run
-│   ├── _logger.ts                  # Logger utility (private)
-│   ├── _sse.ts                     # SSE helpers (private)
-│   └── _tools.ts                   # Agent tool definitions (private)
-├── cloud-functions/                 # Stateless EdgeOne Makers Node Functions
-│   ├── history/index.ts            # POST /history — load conversation messages
-│   └── _logger.ts                  # Logger utility
-├── src/                             # React + Vite + TypeScript frontend
-│   ├── App.tsx                     # Main app + SSE stream lifecycle
-│   ├── api.ts                      # /chat, /stop, /history wrappers
-│   └── components/                 # ChatWindow, ChatInput, CodeViewer, ToolIndicators, ...
-├── package.json                     # Includes @openai/agents
-├── edgeone.json                     # framework=openai-agents-sdk
-├── vite.config.ts
-├── tsconfig.json
-└── .gitignore
+agents/chat/index.ts       Main SSE Agent route
+agents/_chemScene.ts       Chemistry parsing, scene specs, Three.js HTML renderer
+agents/_tools.ts           ChemScene tool registration
+cloud-functions/upload     Attachment upload and extraction
+cloud-functions/scene      Public scene HTML route
+src/components             Chat, clarification cards, preview panel
 ```
 
-> Files prefixed with `_` are private modules — not exposed as public routes.
+## Notes
 
-## Resources
-
-- [EdgeOne Makers Agents — Documentation](https://pages.edgeone.ai/document/agents)
-- [EdgeOne Makers — Quick Start](https://pages.edgeone.ai/document/agents-quick-start)
-- [Makers Models](https://pages.edgeone.ai/document/models)
-
-## License
-
-MIT.
+Scene generation calls an OpenAI-compatible model first and then renders the returned Scene Spec into Three.js HTML. Configure `AI_GATEWAY_API_KEY`, `AI_GATEWAY_BASE_URL`, and optionally `AI_GATEWAY_MODEL`; `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and `OPENAI_MODEL` are also accepted. If the model endpoint is unavailable, the app falls back to local chemistry templates so the preview flow still works. Persistent `/scene` links depend on EdgeOne Makers Store/Blob permissions; without them, local preview and HTML download still work.

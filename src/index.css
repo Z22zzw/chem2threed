@@ -5,31 +5,35 @@
 }
 
 :root {
-  --bg-base: #0a0a0f;
-  --bg-surface: #111118;
-  --bg-elevated: #18181f;
-  --bg-border: #2a2a38;
+  --bg-base: #071012;
+  --bg-surface: #0d1618;
+  --bg-elevated: #132124;
+  --bg-border: #294044;
 
-  --text-primary: #f0f0f8;
-  --text-secondary: #8888aa;
-  --text-muted: #44445a;
+  --text-primary: #f2fbf8;
+  --text-secondary: #adc3bd;
+  --text-muted: #6b817c;
 
-  --accent-gold: #f5c842;
-  --accent-gold-dim: #f5c84230;
-  --accent-gold-glow: #f5c84260;
+  --accent-cyan: #5dd9c7;
+  --accent-amber: #f2b84b;
+  --accent-magenta: #dc5a82;
+  --accent-green: #8bd17c;
+  --accent-gold: var(--accent-amber);
+  --accent-gold-dim: rgba(242, 184, 75, .16);
+  --accent-gold-glow: rgba(242, 184, 75, .38);
 
-  --user-bubble: #1e1e2e;
-  --user-border: #3a3a5a;
-  --bot-bubble: #151520;
-  --bot-border: #252535;
+  --user-bubble: #142427;
+  --user-border: #31565c;
+  --bot-bubble: #0f1a1c;
+  --bot-border: #253b40;
 
-  --font-display: 'Syne', sans-serif;
-  --font-mono: 'DM Mono', monospace;
+  --font-display: "Segoe UI", Inter, system-ui, sans-serif;
+  --font-mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
 
   --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
 
   --shadow-card: 0 8px 40px rgba(0,0,0,0.5);
   --transition-fast: 140ms cubic-bezier(.4,0,.2,1);
@@ -62,7 +66,7 @@ html, body, #root {
   align-items: center;
   gap: 2px;
   padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: 8px;
   border: none;
   background: rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(12px);
@@ -72,7 +76,7 @@ html, body, #root {
 }
 .lang-toggle:hover {
   background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 20px rgba(245, 200, 66, 0.06);
+  box-shadow: 0 0 20px rgba(93, 217, 199, 0.08);
 }
 .lang-toggle:active {
   transform: scale(0.96);
@@ -95,9 +99,9 @@ html, body, #root {
 .lang-toggle__label--active {
   font-size: 14px;
   font-weight: 700;
-  color: var(--accent-gold);
+  color: var(--accent-cyan);
   transform: scale(1);
-  text-shadow: 0 0 12px var(--accent-gold-glow);
+  text-shadow: 0 0 12px rgba(93, 217, 199, .3);
 }
 .lang-toggle__sep {
   font-family: var(--font-mono);

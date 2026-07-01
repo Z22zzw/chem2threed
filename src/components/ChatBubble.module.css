@@ -30,9 +30,9 @@
 
 .bubble {
   position: relative;
-  max-width: 68%;
+  max-width: 74%;
   padding: 12px 16px 24px;
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   font-size: .82rem;
   line-height: 1.65;
   word-break: break-word;
@@ -42,15 +42,49 @@
   background: var(--bot-bubble);
   border: 1px solid var(--bot-border);
   color: var(--text-primary);
-  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px;
+  border-radius: 8px 8px 8px 4px;
 }
 
 .userBubble {
   background: var(--user-bubble);
   border: 1px solid var(--user-border);
   color: var(--text-primary);
-  border-radius: var(--radius-md) var(--radius-md) 4px var(--radius-md);
+  border-radius: 8px 8px 4px 8px;
   white-space: pre-wrap;
+}
+
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.attachment {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  gap: 6px;
+  padding: 5px 7px;
+  border-radius: 7px;
+  border: 1px solid rgba(93, 217, 199, .28);
+  background: rgba(93, 217, 199, .08);
+}
+
+.attachmentType {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.attachmentName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: 11px;
 }
 
 .time {

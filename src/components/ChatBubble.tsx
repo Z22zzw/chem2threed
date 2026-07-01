@@ -3,10 +3,14 @@ import type { Message } from '../types';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useT } from '../i18n';
+import ClarifyCard from './ClarifyCard';
 import styles from './ChatBubble.module.css';
 
 interface Props {
   message: Message;
+  onClarifySubmit?: (values: Record<string, string | string[] | boolean | number>) => void;
+  onClarifyDirect?: (values: Record<string, string | string[] | boolean | number>) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -64,21 +68,48 @@ function normalizeMarkdown(content: string): string {
     .join('\n');
 }
 
-export default memo(function ChatBubble({ message }: Props) {
+export default memo(function ChatBubble({
+  message,
+  onClarifySubmit,
+  onClarifyDirect,
+  disabled = false,
+}: Props) {
   const { lang } = useT();
   const isUser = message.role === 'user';
 
-  if (!isUser && !message.content) return null;
+  if (!isUser && !message.content && !message.clarifyCard) return null;
 
   return (
     <div className={`${styles.row} ${isUser ? styles.userRow : styles.botRow}`}>
       {!isUser && <div className={styles.avatar}>⬡</div>}
       <div className={`${styles.bubble} ${isUser ? styles.userBubble : styles.botBubble}`}>
         {isUser ? (
-          message.content
+          <>
+            {message.content}
+            {message.attachments && message.attachments.length > 0 && (
+              <div className={styles.attachments}>
+                {message.attachments.map(item => (
+                  <div key={item.id} className={styles.attachment}>
+                    <span className={styles.attachmentType}>{item.type === 'image' ? 'IMG' : 'DOC'}</span>
+                    <span className={styles.attachmentName}>{item.fileName}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         ) : (
           <div className={`${styles.markdown} ${message.streaming ? styles.markdownStreaming : ''}`}>
-            <Markdown remarkPlugins={[remarkGfm]}>{normalizeMarkdown(message.content)}</Markdown>
+            {message.content && (
+              <Markdown remarkPlugins={[remarkGfm]}>{normalizeMarkdown(message.content)}</Markdown>
+            )}
+            {message.clarifyCard && onClarifySubmit && onClarifyDirect && (
+              <ClarifyCard
+                card={message.clarifyCard}
+                disabled={disabled}
+                onSubmit={onClarifySubmit}
+                onDirect={onClarifyDirect}
+              />
+            )}
           </div>
         )}
         <span className={styles.time}>

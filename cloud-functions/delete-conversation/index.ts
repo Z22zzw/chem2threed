@@ -21,6 +21,7 @@
  */
 
 import { createLogger } from '../_logger';
+import { deleteLocalConversation } from '../../agents/_localStore';
 
 const logger = createLogger('delete-conversation');
 
@@ -72,16 +73,15 @@ export async function onRequestPost(context: any): Promise<Response> {
     const args: Record<string, unknown> = { conversationId };
     if (userId) args.userId = userId;
     await store.deleteConversation(args);
+    deleteLocalConversation(conversationId);
 
     logger.log(`[delete-conversation] end: ${new Date().toISOString()}, total: ${Date.now() - startTime}ms`);
     return jsonResponse({ status: 'ok', conversation_id: conversationId });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error('failed to delete conversation:', e);
+    deleteLocalConversation(conversationId);
     logger.log(`[delete-conversation] end: ${new Date().toISOString()}, total: ${Date.now() - startTime}ms`);
-    return jsonResponse(
-      { status: 'error', conversation_id: conversationId, message },
-      500,
-    );
+    return jsonResponse({ status: 'ok', conversation_id: conversationId, fallback: 'local', message });
   }
 }

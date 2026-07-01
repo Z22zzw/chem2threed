@@ -22,6 +22,7 @@
  */
 
 import { createLogger } from '../_logger';
+import { getLocalMessages, type LocalMemoryMessage } from '../../agents/_localStore';
 
 const logger = createLogger('history');
 
@@ -107,6 +108,12 @@ function normalizeMessage(item: MemoryMessage): NormalizedMessage | null {
   if (role !== 'user' && role !== 'assistant') return null;
 
   const meta = item.metadata ?? {};
+  if (meta.chem_scene_record || (
+    typeof item.content === 'string' &&
+    item.content.startsWith('__CHEMSCENE_RECORD__')
+  )) {
+    return null;
+  }
   if (meta.agent_sdk_session) {
     const itemType = meta.item_type as string | null | undefined;
     if (itemType != null && itemType !== 'message') return null;
@@ -171,6 +178,27 @@ function dedupeAdjacent(messages: FrontendMessage[]): FrontendMessage[] {
   return deduped;
 }
 
+function buildVisibleMessages(history: MemoryMessage[]): {
+  visible: NormalizedMessage[];
+  messages: FrontendMessage[];
+} {
+  const visible = history
+    .map(normalizeMessage)
+    .filter((item): item is NormalizedMessage => item !== null);
+  return {
+    visible,
+    messages: dedupeAdjacent(mergeAssistantFragments(visible)),
+  };
+}
+
+function getLocalHistory(conversationId: string): LocalMemoryMessage[] {
+  return getLocalMessages({
+    conversationId,
+    limit: 100,
+    order: 'asc',
+  });
+}
+
 // ── Handler ─────────────────────────────────────────────────
 
 export async function onRequestPost(context: any): Promise<Response> {
@@ -194,21 +222,24 @@ export async function onRequestPost(context: any): Promise<Response> {
     const storeStartTime = Date.now();
     logger.log(`[history] store.getMessages start: ${new Date(storeStartTime).toISOString()}`);
 
-    const history: MemoryMessage[] = await store.getMessages({
+    let history: MemoryMessage[] = await store.getMessages({
       conversationId,
       limit: 100,
       order: 'asc',
     });
+
+    const localHistory = history.length === 0 ? getLocalHistory(conversationId) : [];
+    if (localHistory.length > 0) {
+      logger.log(`[history] using local fallback records: ${localHistory.length}`);
+      history = localHistory;
+    }
 
     const storeEndTime = Date.now();
     logger.log(
       `[history] store.getMessages end: ${new Date(storeEndTime).toISOString()}, duration: ${storeEndTime - storeStartTime}ms (records: ${history.length})`,
     );
 
-    const visible = history
-      .map(normalizeMessage)
-      .filter((item): item is NormalizedMessage => item !== null);
-    const messages = dedupeAdjacent(mergeAssistantFragments(visible));
+    const { visible, messages } = buildVisibleMessages(history);
 
     logger.log(
       `[history] end: ${new Date().toISOString()}, total: ${Date.now() - requestStartTime}ms (${history.length} raw -> ${visible.length} visible -> ${messages.length} bubbles)`,
@@ -217,6 +248,14 @@ export async function onRequestPost(context: any): Promise<Response> {
     return jsonResponse({ conversation_id: conversationId, messages });
   } catch (e) {
     logger.error('failed to get messages:', e);
+    const localHistory = getLocalHistory(conversationId);
+    if (localHistory.length > 0) {
+      const { visible, messages } = buildVisibleMessages(localHistory);
+      logger.log(
+        `[history] local fallback success: ${localHistory.length} raw -> ${visible.length} visible -> ${messages.length} bubbles`,
+      );
+      return jsonResponse({ conversation_id: conversationId, messages, fallback: 'local' });
+    }
     logger.log(`[history] end: ${new Date().toISOString()}, total: ${Date.now() - requestStartTime}ms (error)`);
     return jsonResponse({ conversation_id: conversationId, messages: [] });
   }

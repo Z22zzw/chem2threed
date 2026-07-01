@@ -6,9 +6,10 @@ import styles from './DebugPanel.module.css';
 interface Props {
   events: RawSseEvent[];
   onClear: () => void;
+  onBack?: () => void;
 }
 
-export default function DebugPanel({ events, onClear }: Props) {
+export default function DebugPanel({ events, onClear, onBack }: Props) {
   const { t, lang } = useT();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +26,10 @@ export default function DebugPanel({ events, onClear }: Props) {
           <span className={styles.title}>{t("debug.title")}</span>
           <span className={styles.count}>{events.length} {t("debug.events")}</span>
         </div>
-        <button className={styles.clearBtn} onClick={onClear}>{t("debug.clear")}</button>
+        <div className={styles.headerActions}>
+          {onBack && <button className={styles.clearBtn} onClick={onBack}>{t("debug.back")}</button>}
+          <button className={styles.clearBtn} onClick={onClear}>{t("debug.clear")}</button>
+        </div>
       </div>
 
       <div className={styles.body} ref={scrollRef}>

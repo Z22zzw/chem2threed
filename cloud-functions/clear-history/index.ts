@@ -15,6 +15,7 @@
  */
 
 import { createLogger } from '../_logger';
+import { clearLocalMessages } from '../../agents/_localStore';
 
 const logger = createLogger('clear-history');
 
@@ -66,13 +67,15 @@ export async function onRequestPost(context: any): Promise<Response> {
     const clearArgs: Record<string, unknown> = { conversationId };
     if (userId) clearArgs.userId = userId;
     await store.clearMessages(clearArgs);
+    clearLocalMessages(conversationId);
 
     logger.log(`[clear-history] end: ${new Date().toISOString()}, total: ${Date.now() - startTime}ms`);
     return jsonResponse({ status: 'ok', conversation_id: conversationId });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error('failed to clear messages:', e);
+    clearLocalMessages(conversationId);
     logger.log(`[clear-history] end: ${new Date().toISOString()}, total: ${Date.now() - startTime}ms`);
-    return jsonResponse({ status: 'error', conversation_id: conversationId, message }, 500);
+    return jsonResponse({ status: 'ok', conversation_id: conversationId, fallback: 'local', message });
   }
 }

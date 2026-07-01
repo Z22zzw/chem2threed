@@ -1,32 +1,78 @@
 /**
- * Agent handler — EdgeOne Makers
- * ========================================
+ * ChemScene Agent handler — EdgeOne Makers
  *
- * File path agents/chat/index.ts maps to **POST /chat**
- * (EdgeOne Makers routing convention: directory name = route, index = default entry)
- *
- * Files starting with _ (e.g. _tools.ts, _sse.ts) are private modules,
- * not mapped as public routes.
- *
- * context convention:
- *   context.request.body    — object, request body
- *   context.request.signal  — AbortSignal, set when /chat/stop is called
- *   conversation_id — conversation ID
- *   context.runId           — current run ID
+ * File path agents/chat/index.ts maps to POST /chat.
+ * The handler keeps the starter template's SSE and Store conventions while
+ * running the ChemScene pipeline:
+ * parse -> optional clarify card -> model Scene Spec -> Three.js HTML -> /scene URL.
  */
 
-import OpenAI from 'openai';
-import { run, Agent, OpenAIChatCompletionsModel, type Session } from '@openai/agents';
 import { createLogger } from '../_logger';
-import { createTools } from '../_tools';
-import { sseResponse } from '../_sse';
+import { sseResponse, type SseEvent } from '../_sse';
+import {
+  buildSceneUrl,
+  createClarifyCard,
+  createSceneRecord,
+  finalAnswer,
+  parseChemRequest,
+  renderThreeJsHtml,
+  serializeSceneRecord,
+  shouldGenerateImmediately,
+  type AttachmentInput,
+} from '../_chemScene';
+import { appendLocalMessage } from '../_localStore';
+import { buildSceneSpecWithModel } from '../_modelScene';
 
-const logger = createLogger('chat');
-const DEFAULT_MODEL = '@makers/deepseek-v4-flash';
+const logger = createLogger('chem-chat');
+
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+function normalizeAttachments(value: unknown): AttachmentInput[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is Record<string, unknown> =>
+      item !== null && typeof item === 'object' && !Array.isArray(item),
+    )
+    .map((item) => ({
+      id: typeof item.id === 'string' ? item.id : undefined,
+      type: typeof item.type === 'string' ? item.type : undefined,
+      fileName: typeof item.fileName === 'string' ? item.fileName : undefined,
+      mimeType: typeof item.mimeType === 'string' ? item.mimeType : undefined,
+      size: typeof item.size === 'number' ? item.size : undefined,
+      caption: typeof item.caption === 'string' ? item.caption : undefined,
+      extractedText: typeof item.extractedText === 'string' ? item.extractedText : undefined,
+      summary: typeof item.summary === 'string' ? item.summary : undefined,
+      error: typeof item.error === 'string' ? item.error : undefined,
+    }));
+}
+
+async function appendMessage(
+  context: any,
+  args: Record<string, unknown>,
+  logLabel: string,
+): Promise<void> {
+  try {
+    await context.store.appendMessage(args);
+  } catch (e) {
+    logger.error(`[store] failed to append ${logLabel}:`, e);
+  }
+  appendLocalMessage(args);
+}
+
+function progress(step: string, label: string, progressValue: number, detail?: string): SseEvent {
+  return {
+    event: 'generation_status',
+    data: { step, label, progress: progressValue, detail },
+  };
+}
 
 export async function onRequest(context: any) {
-  const body = context.request.body ?? {};
-  const message = body.message as string | undefined;
+  const body = asObject(context.request.body ?? {});
+  const message = typeof body.message === 'string' ? body.message.trim() : '';
   if (!message) {
     return new Response(
       JSON.stringify({ error: "'message' is required" }),
@@ -34,112 +80,142 @@ export async function onRequest(context: any) {
     );
   }
 
-  // Accept both camelCase (chat handler historical convention) and snake_case
-  // (cloud-functions convention) as a body field name for the user id.
   const rawUserId = typeof body.userId === 'string'
     ? body.userId
     : (typeof body.user_id === 'string' ? body.user_id : '');
   const userId = rawUserId.trim() || undefined;
   const userMsgId = typeof body.userMsgId === 'string' ? body.userMsgId : undefined;
-
+  const botMsgId = typeof body.botMsgId === 'string' ? body.botMsgId : undefined;
+  const generationMode = typeof body.generationMode === 'string' ? body.generationMode : undefined;
+  const clarifySelections = asObject(body.clarifySelections);
+  const attachments = normalizeAttachments(body.attachments);
   const conversationId: string = context.conversation_id ?? '';
   const signal: AbortSignal | undefined = context.request.signal;
 
-  logger.log(`[request] cid=${conversationId}, uid=${userId ?? '-'}, message="${message.slice(0, 50)}..."`);
+  logger.log(`[request] cid=${conversationId}, uid=${userId ?? '-'}, mode=${generationMode ?? '-'}, message="${message.slice(0, 80)}"`);
 
-  // Write a user-indexed copy of the user message so /conversations
-  // (which scans the user_conversation_index prefix) can list this thread.
-  // The OpenAI Agents SDK Session adapter does NOT pass user_id when it
-  // persists turns, so without this manual write the user index stays
-  // empty and listConversations({userId}) returns []. The duplicate is
-  // filtered out of /history because that route already drops items
-  // marked with metadata.agent_sdk_session.
   if (userId && conversationId) {
-    try {
-      const appendArgs: Record<string, unknown> = {
-        conversationId,
-        role: 'user',
-        content: message,
-        userId,
-      };
-      if (userMsgId) appendArgs.messageId = userMsgId;
-      await context.store.appendMessage(appendArgs);
-    } catch (e) {
-      // Non-fatal — chat itself should keep working even if the
-      // user-index write fails.
-      logger.error('[chat] failed to write user index:', e);
-    }
+    const appendArgs: Record<string, unknown> = {
+      conversationId,
+      role: 'user',
+      content: message,
+      userId,
+    };
+    if (userMsgId) appendArgs.messageId = userMsgId;
+    await appendMessage(context, appendArgs, 'user');
   }
 
-  // Use built-in store session adapter for persistence
-  const session: Session | undefined = conversationId
-    ? context.store.openaiSession(conversationId)
-    : undefined;
-
-  // Configure the OpenAI-compatible LLM model directly from runtime env.
-  const env = context.env as Record<string, string | undefined>;
-  const llmClient = new OpenAI({
-    apiKey: env.AI_GATEWAY_API_KEY,
-    baseURL: env.AI_GATEWAY_BASE_URL,
-  });
-  const model = new OpenAIChatCompletionsModel(
-    llmClient,
-    env.AI_GATEWAY_MODEL ?? DEFAULT_MODEL,
-  );
-
-  // Create OpenAI Agent
-  const agent = new Agent({
-    name: 'Assistant',
-    instructions:
-      'You are an EdgeOne Makers OpenAI Agents SDK (TypeScript) starter example: an out-of-the-box Agent template that helps developers quickly run through and validate platform capabilities.\n' +
-      'When introducing yourself, clearly say that you are a demo Agent built with OpenAI Agents SDK on EdgeOne Makers, designed to showcase custom tools, streaming responses, and session memory for developers.\n' +
-      'Use the four custom tools when they help you answer the user concretely. Otherwise answer directly and keep the response brief.\n' +
-      '\n' +
-      'TOOL CALLING RULES — read carefully:\n' +
-      '- Only invoke a tool by its EXACT registered name. The four available tools are:\n' +
-      '  `get_weather`, `get_clothing_advice`, `translate_text`, `text_statistics`.\n' +
-      '- NEVER invent compound names like `get_clothing_weather`. If you need both ' +
-      'weather and clothing advice, call `get_weather` first, then call `get_clothing_advice` ' +
-      'with the weather output as input — two separate tool calls in sequence.\n' +
-      '- If a request needs no tool, answer directly.\n' +
-      '\n' +
-      'RESPONSE STYLE — avoid repeating yourself:\n' +
-      '- Do NOT narrate before, between, or after tool calls (no "I\'ll start by...", ' +
-      '"Great! Now let me...", "Let me give you...").\n' +
-      '- After all tools have returned, write ONE final answer that uses the tool outputs ' +
-      'directly. Do not summarize the same weather/data twice in different formats ' +
-      '(prose + table + raw tool string). Pick one presentation and stick with it.\n' +
-      '- Keep the final answer compact: a short title, the requested facts, and at most one ' +
-      'trailing sentence of context. No "Need anything else?" type filler.',
-    tools: createTools(),
-    model: model,
-  });
-
-  // Map an SDK stream event to a business SSE event, or null to skip.
-  const toSseEvent = (e: any) => {
-    if (e.type === 'raw_model_stream_event' && e.data?.type === 'output_text_delta') {
-      const delta = e.data.delta as string;
-      logger.log(`[stream] text_delta: ${JSON.stringify(delta)}`);
-      return { event: 'text_delta', data: { delta } };
-    }
-    if (e.type === 'run_item_stream_event' && e.name === 'tool_called') {
-      const tool = e.item?.name ?? e.item?.rawItem?.name;
-      if (tool) {
-        logger.log(`[stream] tool_called: ${tool}`);
-        return { event: 'tool_called', data: { tool } };
-      }
-    }
-    return null;
-  };
-
-  // Convert SDK stream events into business SSE events.
   return sseResponse(
     async function* () {
-      const result = await run(agent, message, { stream: true, signal, session });
-      for await (const event of result.toStream()) {
-        if (signal?.aborted) break;
-        const sse = toSseEvent(event);
-        if (sse) yield sse;
+      yield progress('parse', '解析教学需求', 0.08);
+      yield { event: 'tool_called', data: { tool: 'parse_chem_request' } };
+      const parsed = parseChemRequest(message, attachments);
+      yield progress('parse', '已识别建模对象', 0.18, parsed.modelingObject);
+
+      if (attachments.length > 0) {
+        yield { event: 'tool_called', data: { tool: 'analyze_attachment' } };
+        yield progress('attachment', '已合并附件线索', 0.26, parsed.attachmentSummary.slice(0, 120));
+      }
+
+      const generateNow = shouldGenerateImmediately(message, generationMode) || Object.keys(clarifySelections).length > 0;
+      if (!generateNow) {
+        yield { event: 'tool_called', data: { tool: 'create_clarify_card' } };
+        const card = createClarifyCard(parsed);
+        yield {
+          event: 'text_delta',
+          data: {
+            delta: `我识别到你要制作“${parsed.modelingObject}”。下面是可选设置，保留默认值也可以直接生成。`,
+          },
+        };
+        yield { event: 'clarify_card', data: card };
+        yield progress('clarify', '等待确认或直接生成', 0.34);
+        if (conversationId) {
+          await appendMessage(context, {
+            conversationId,
+            role: 'assistant',
+            content: `我识别到你要制作“${parsed.modelingObject}”。下面是可选设置，保留默认值也可以直接生成。`,
+            ...(botMsgId ? { messageId: botMsgId } : {}),
+          }, 'assistant clarify');
+        }
+        return;
+      }
+
+      yield { event: 'tool_called', data: { tool: 'match_scene_template' } };
+      yield progress('template', '匹配化学 3D 模板', 0.42, parsed.templateId);
+
+      yield { event: 'tool_called', data: { tool: 'generate_scene_spec' } };
+      yield progress('spec', '调用模型生成 Scene Spec', 0.5);
+      const sceneResult = await buildSceneSpecWithModel(context, parsed, clarifySelections, attachments);
+      const sceneSpec = sceneResult.spec;
+      yield { event: 'scene_spec', data: sceneSpec };
+      yield progress(
+        'spec',
+        sceneResult.source === 'model' ? '模型已生成 Scene Spec' : '使用离线模板兜底 Scene Spec',
+        0.58,
+        sceneResult.source === 'model'
+          ? `${sceneResult.model ?? 'model'} · ${sceneSpec.title}`
+          : sceneResult.error ?? sceneSpec.title,
+      );
+
+      if (signal?.aborted) return;
+
+      yield { event: 'tool_called', data: { tool: 'render_threejs_html' } };
+      const htmlContent = renderThreeJsHtml(sceneSpec);
+      const record = createSceneRecord(conversationId, sceneSpec, htmlContent);
+      yield progress('render', 'Three.js 页面已生成', 0.74, `${Math.round(htmlContent.length / 1024)} KB`);
+      yield {
+        event: 'preview_ready',
+        data: {
+          sceneId: sceneSpec.sceneId,
+          templateId: sceneSpec.templateId,
+          title: sceneSpec.title,
+          htmlContent,
+        },
+      };
+
+      if (conversationId) {
+        await appendMessage(context, {
+          conversationId,
+          role: 'assistant',
+          content: serializeSceneRecord(record),
+          metadata: {
+            chem_scene_record: true,
+            sceneId: sceneSpec.sceneId,
+            templateId: sceneSpec.templateId,
+          },
+        }, 'scene record');
+      }
+
+      yield { event: 'tool_called', data: { tool: 'deploy_scene_to_edgeone' } };
+      yield { event: 'deploying', data: { sceneId: sceneSpec.sceneId, strategy: 'edgeone-app-scene-route' } };
+      const sceneUrl = buildSceneUrl(context, conversationId, sceneSpec.sceneId);
+      yield progress('deploy', '场景已发布为公开链接', 0.92, sceneUrl);
+      yield {
+        event: 'deploy_done',
+        data: {
+          success: true,
+          sceneId: sceneSpec.sceneId,
+          url: sceneUrl,
+          strategy: 'edgeone-app-scene-route',
+          deployedAt: new Date().toISOString(),
+        },
+      };
+
+      const answer = finalAnswer(sceneSpec, sceneUrl, {
+        source: sceneResult.source,
+        model: sceneResult.model,
+        error: sceneResult.error,
+      });
+      yield { event: 'text_delta', data: { delta: answer } };
+      yield progress('done', '完成', 1, sceneSpec.title);
+
+      if (conversationId) {
+        await appendMessage(context, {
+          conversationId,
+          role: 'assistant',
+          content: answer,
+          ...(botMsgId ? { messageId: botMsgId } : {}),
+        }, 'assistant final');
       }
     },
     { signal, logger },
