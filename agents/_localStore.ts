@@ -54,8 +54,9 @@ function getState(): LocalStoreState {
 function getDiskPath(): string | null {
   try {
     if (typeof process === 'undefined' || typeof process.cwd !== 'function') return null;
-    return process.env.CHEMSCENE_LOCAL_STORE_PATH ||
-      join(process.cwd(), '.edgeone-local-store', 'chemscene-store.json');
+    if (process.env.CHEMSCENE_LOCAL_STORE_PATH) return process.env.CHEMSCENE_LOCAL_STORE_PATH;
+    if (process.env.VERCEL) return join(process.env.TMPDIR || '/tmp', 'chemscene-store.json');
+    return join(process.cwd(), '.edgeone-local-store', 'chemscene-store.json');
   } catch {
     return null;
   }

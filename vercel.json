@@ -1,0 +1,14 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/chat", "destination": "/api/chat" },
+    { "source": "/stop", "destination": "/api/stop" },
+    { "source": "/upload", "destination": "/api/upload" },
+    { "source": "/history", "destination": "/api/history" },
+    { "source": "/conversations", "destination": "/api/conversations" },
+    { "source": "/clear-history", "destination": "/api/clear-history" },
+    { "source": "/delete-conversation", "destination": "/api/delete-conversation" },
+    { "source": "/scene", "destination": "/api/scene" }
+  ]
+}
