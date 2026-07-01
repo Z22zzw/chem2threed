@@ -186,12 +186,18 @@ function normalizeChemistry(
   if (templateId === 'reaction-3d') {
     const reactants = normalizeMoleculeList(raw.reactants);
     const products = normalizeMoleculeList(raw.products);
+    const fallbackReactants = normalizeMoleculeList(fallback.reactants);
+    const fallbackProducts = normalizeMoleculeList(fallback.products);
     return {
       ...raw,
       equation: pickString(raw.equation, String(fallback.equation ?? '')),
       steps: pickStringArray(raw.steps, Array.isArray(fallback.steps) ? fallback.steps as string[] : []),
-      ...(reactants.length > 0 ? { reactants } : {}),
-      ...(products.length > 0 ? { products } : {}),
+      ...((reactants.length > 0 || fallbackReactants.length > 0)
+        ? { reactants: reactants.length > 0 ? reactants : fallbackReactants }
+        : {}),
+      ...((products.length > 0 || fallbackProducts.length > 0)
+        ? { products: products.length > 0 ? products : fallbackProducts }
+        : {}),
     };
   }
 
@@ -225,13 +231,15 @@ function normalizeModelSpec(
 ): SceneSpec {
   if (!isRecord(value)) throw new Error('Model response is not a JSON object.');
 
-  // Model intent must win over UI defaults. Clarification cards submit default
-  // values even when the user did not actively change them, so using
-  // selections.template_id first can incorrectly force a reaction into the
-  // default molecule renderer.
-  const selectedTemplate = typeof value.templateId === 'string'
-    ? value.templateId
-    : selections.template_id;
+  // Explicit user selections win. Otherwise model output can refine fallback,
+  // but it must not downgrade a locally detected reaction into a single
+  // molecule just because a molecule name appears in the prompt.
+  const explicitTemplate = typeof selections.template_id === 'string' ? selections.template_id : undefined;
+  const modelTemplate = typeof value.templateId === 'string' ? value.templateId : undefined;
+  let selectedTemplate = explicitTemplate ?? modelTemplate ?? fallback.templateId;
+  if (!explicitTemplate && fallback.templateId === 'reaction-3d' && selectedTemplate !== 'reaction-3d') {
+    selectedTemplate = fallback.templateId;
+  }
   const templateId = normalizeTemplateId(selectedTemplate, fallback.templateId);
 
   const rawVisual = isRecord(value.visualStyle) ? value.visualStyle : {};
@@ -286,8 +294,10 @@ function buildPrompt(
     '- interactions 至少包含 rotate 和 zoom，可加入 atom_label、bond_angle、key_note、animate。',
     '- molecule-3d 的 chemistry 必须包含 atoms 和 bonds。atoms 使用 { element, position:[x,y,z], label }，bonds 使用 { from, to, type }，下标从 0 开始。',
     '- reaction-3d 的 chemistry 应包含 equation、steps；如果能表达分子，请补充 reactants/products，结构同 molecule。',
-    '- 出现硝化、皂化、燃烧、水解、酯化、取代、加成、氧化还原等反应过程时，templateId 必须是 reaction-3d；不要因为出现苯、甲烷等单个分子名就降级为 molecule-3d。',
+    '- 出现硝化、皂化、燃烧、水解、酯化、取代、加成、加氢、氢化、氧化还原等反应过程时，templateId 必须是 reaction-3d；不要因为出现苯、甲烷、乙烷等单个分子名就降级为 molecule-3d。',
+    '- “乙烷 / ethane / C2H6”作为单分子需求时，应生成乙烷 C2H6，不要生成甲烷 CH4。',
     '- “苯和浓硝酸的硝化反应 / benzene nitration”应生成苯、浓硝酸、硝基苯、水和 NO2+ 相关步骤的 reaction-3d 场景。',
+    '- “苯和氢气反应 / benzene hydrogenation”应生成 C6H6 + 3H2 -> C6H12 的 reaction-3d 场景，产物为环己烷。',
     '- crystal-3d 的 chemistry 包含 lattice、repeat、ions。',
     '- orbital-3d 的 chemistry 包含 orbitalType、angle。',
     '- equipment-3d / apparatus-3d 的 chemistry 包含 parts，并尽量补充 flowLabels 或 safetyNotes。',

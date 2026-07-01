@@ -123,6 +123,34 @@ const MOLECULES: Record<string, MoleculeDefinition> = {
     ],
     annotations: [{ type: 'angle', label: '109.5°', position: [0.35, 0.62, 0.2] }],
   },
+  ethane: {
+    title: '乙烷分子的 C-C 单键与双四面体构型',
+    formula: 'C2H6',
+    knowledgePoint: '两个 sp3 杂化碳原子通过 C-C 单键连接，围绕单键可发生构象旋转',
+    atoms: [
+      { element: 'C', position: [-0.75, 0, 0], label: 'C1' },
+      { element: 'C', position: [0.75, 0, 0], label: 'C2' },
+      { element: 'H', position: [-1.25, 0.98, 0], label: 'H' },
+      { element: 'H', position: [-1.25, -0.5, 0.86], label: 'H' },
+      { element: 'H', position: [-1.25, -0.5, -0.86], label: 'H' },
+      { element: 'H', position: [1.25, 0.98, 0], label: 'H' },
+      { element: 'H', position: [1.25, -0.5, 0.86], label: 'H' },
+      { element: 'H', position: [1.25, -0.5, -0.86], label: 'H' },
+    ],
+    bonds: [
+      { from: 0, to: 1, type: 'single' },
+      { from: 0, to: 2, type: 'single' },
+      { from: 0, to: 3, type: 'single' },
+      { from: 0, to: 4, type: 'single' },
+      { from: 1, to: 5, type: 'single' },
+      { from: 1, to: 6, type: 'single' },
+      { from: 1, to: 7, type: 'single' },
+    ],
+    annotations: [
+      { type: 'bond', label: 'C-C σ 单键', position: [0, 0.38, 0] },
+      { type: 'angle', label: '约 109.5°', position: [-0.95, 0.6, 0.25] },
+    ],
+  },
   ethanol: {
     title: '乙醇分子的羟基与碳链',
     formula: 'C2H6O',
@@ -171,6 +199,17 @@ const MOLECULES: Record<string, MoleculeDefinition> = {
       { from: 0, to: 2, type: 'single' },
     ],
     annotations: [{ type: 'angle', label: '104.5°', position: [0, 0.38, 0] }],
+  },
+  hydrogen: {
+    title: '氢气分子的 H-H 单键结构',
+    formula: 'H2',
+    knowledgePoint: '两个氢原子共享一对电子形成 H-H σ 单键',
+    atoms: [
+      { element: 'H', position: [-0.38, 0, 0], label: 'H' },
+      { element: 'H', position: [0.38, 0, 0], label: 'H' },
+    ],
+    bonds: [{ from: 0, to: 1, type: 'single' }],
+    annotations: [{ type: 'bond', label: 'H-H σ 键', position: [0, 0.35, 0] }],
   },
   carbonDioxide: {
     title: '二氧化碳的线形结构',
@@ -267,10 +306,12 @@ function detectMolecule(text: string): string {
   if (containsAny(text, ['乙酸', '醋酸', 'acetic acid', 'ch3cooh'])) return 'aceticAcid';
   if (containsAny(text, ['甲烷', 'methane', 'ch4'])) return 'methane';
   if (containsAny(text, ['乙醇', '酒精', 'ethanol', 'c2h6o'])) return 'ethanol';
+  if (containsAny(text, ['乙烷', 'ethane', 'c2h6'])) return 'ethane';
   if (containsAny(text, ['苯', 'benzene', 'c6h6'])) return 'benzene';
   if (containsAny(text, ['二氧化碳', 'co2', 'carbon dioxide'])) return 'carbonDioxide';
   if (containsAny(text, ['氨', '氨气', 'nh3', 'ammonia'])) return 'ammonia';
   if (containsAny(text, ['水分子', '水的', 'h2o', 'water'])) return 'water';
+  if (containsAny(text, ['氢气', '氢分子', 'h2', 'hydrogen'])) return 'hydrogen';
   return 'methane';
 }
 
@@ -295,6 +336,14 @@ function isNitration(text: string): boolean {
     || (hasBenzene && hasNitricAcid);
 }
 
+function isBenzeneHydrogenation(text: string): boolean {
+  const normalized = text.toLowerCase();
+  const hasBenzene = containsAny(normalized, ['苯', 'benzene', 'c6h6']);
+  const hasHydrogen = containsAny(normalized, ['氢气', 'h2', 'hydrogen']);
+  const hasReaction = containsAny(normalized, ['反应', '加氢', '氢化', '催化氢化', 'reaction', 'hydrogenation']);
+  return hasBenzene && hasHydrogen && hasReaction;
+}
+
 function isGenericReaction(text: string): boolean {
   const normalized = text.toLowerCase();
   return containsAny(normalized, [
@@ -307,6 +356,8 @@ function isGenericReaction(text: string): boolean {
     '酯化',
     '取代',
     '加成',
+    '加氢',
+    '氢化',
     '消去',
     '氧化',
     '还原',
@@ -316,22 +367,25 @@ function isGenericReaction(text: string): boolean {
     'hydrolysis',
     'substitution',
     'addition',
+    'hydrogenation',
   ]);
 }
 
 function isKnownReaction(text: string): boolean {
-  return isSaponification(text) || isNitration(text);
+  return isSaponification(text) || isNitration(text) || isBenzeneHydrogenation(text);
 }
 
 function reactionNameForInput(text: string): string {
   if (isSaponification(text)) return '皂化反应过程';
   if (isNitration(text)) return '苯的硝化反应过程';
+  if (isBenzeneHydrogenation(text)) return '苯的催化加氢反应过程';
   return '化学反应过程';
 }
 
 function reactionKnowledgeForInput(text: string): string {
   if (isSaponification(text)) return '酯在碱性条件下水解生成羧酸盐和醇的过程';
   if (isNitration(text)) return '苯环发生亲电取代，引入硝基生成硝基苯的过程';
+  if (isBenzeneHydrogenation(text)) return '苯环在催化剂作用下与氢气加成生成环己烷的过程';
   return '反应物、生成物、化学键重组和反应过程动画';
 }
 
@@ -646,6 +700,85 @@ function buildBenzeneNitrationChemistry(): Record<string, unknown> {
   };
 }
 
+function buildHydrogenMolecule(label = '氢气 H2'): Record<string, unknown> {
+  const hydrogen = MOLECULES.hydrogen;
+  return {
+    label,
+    formula: hydrogen.formula,
+    atoms: hydrogen.atoms,
+    bonds: hydrogen.bonds,
+    annotations: hydrogen.annotations ?? [],
+  };
+}
+
+function buildCyclohexaneMolecule(): Record<string, unknown> {
+  const atoms: Atom[] = [];
+  const bonds: Bond[] = [];
+  const ring: Array<[number, number, number]> = [
+    [1.35, 0, 0.45],
+    [0.68, 1.18, -0.45],
+    [-0.68, 1.18, 0.45],
+    [-1.35, 0, -0.45],
+    [-0.68, -1.18, 0.45],
+    [0.68, -1.18, -0.45],
+  ];
+
+  ring.forEach((position, index) => {
+    atoms.push({ element: 'C', position, label: `C${index + 1}` });
+  });
+
+  ring.forEach(([x, y, z], index) => {
+    const radialLength = Math.max(0.001, Math.hypot(x, y));
+    const radialX = x / radialLength;
+    const radialY = y / radialLength;
+    atoms.push({ element: 'H', position: [x + radialX * 0.82, y + radialY * 0.82, z], label: 'H' });
+    atoms.push({ element: 'H', position: [x, y, z > 0 ? z + 0.86 : z - 0.86], label: 'H' });
+    bonds.push({ from: index, to: 6 + index * 2, type: 'single' });
+    bonds.push({ from: index, to: 7 + index * 2, type: 'single' });
+  });
+
+  for (let i = 0; i < 6; i += 1) {
+    bonds.push({ from: i, to: (i + 1) % 6, type: 'single' });
+  }
+
+  return {
+    label: '环己烷 C6H12',
+    formula: 'C6H12',
+    atoms,
+    bonds,
+    annotations: [
+      { type: 'group', label: '饱和六元环', position: [0, 0, 0.95] },
+      { type: 'note', label: '苯环加氢后失去芳香性', position: [0, -1.75, 0] },
+    ],
+  };
+}
+
+function buildBenzeneHydrogenationChemistry(): Record<string, unknown> {
+  const benzene = buildBenzene();
+
+  return {
+    equation: 'C6H6 + 3H2 -> C6H12',
+    conditions: ['Ni/Pt/Pd 催化剂', '加热加压', '催化加氢'],
+    steps: ['H2 在金属催化剂表面吸附并活化', '苯环 π 键逐步加氢', '形成饱和六元环环己烷'],
+    reactants: [
+      {
+        label: '苯 C6H6',
+        formula: benzene.formula,
+        atoms: benzene.atoms,
+        bonds: benzene.bonds,
+        annotations: [
+          { type: 'group', label: '芳香 π 体系', position: [0, 0, 0.28] },
+        ],
+      },
+      buildHydrogenMolecule('3 H2'),
+    ],
+    products: [
+      buildCyclohexaneMolecule(),
+    ],
+    focus: ['催化加氢', 'π 键转化为 C-C 单键', '环己烷生成'],
+  };
+}
+
 export function buildSceneSpec(
   parsed: ParsedChemRequest,
   selections: Record<string, unknown> | undefined = {},
@@ -693,6 +826,15 @@ export function buildSceneSpec(
         title: '苯的硝化反应',
         teachingGoal: '展示苯与浓硝酸在浓硫酸催化下发生亲电芳香取代，理解 NO2+ 生成、苯环进攻和硝基苯生成过程。',
         chemistry: buildBenzeneNitrationChemistry(),
+      };
+    }
+
+    if (isBenzeneHydrogenation(parsed.rawInput) || isBenzeneHydrogenation(parsed.normalizedInput)) {
+      return {
+        ...base,
+        title: '苯的催化加氢反应',
+        teachingGoal: '展示苯与氢气在金属催化剂作用下加成生成环己烷，理解芳香 π 体系被逐步加氢为饱和六元环的过程。',
+        chemistry: buildBenzeneHydrogenationChemistry(),
       };
     }
 
