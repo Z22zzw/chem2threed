@@ -1,5 +1,5 @@
 // 分子结构模板 - 单个分子的3D展示
-import type { SceneTemplate, MoleculeParams } from '../types.js';
+import type { SceneTemplate, MoleculeParams } from '../types/index.js';
 import { findMolecule } from './_shared/coordinates.js';
 import { pageShell, buildMoleculeScript, getColorScheme } from './_shared/boilerplate.js';
 

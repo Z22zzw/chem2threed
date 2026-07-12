@@ -1,6 +1,6 @@
 // 预置原子坐标库 - 常见分子
 // 坐标单位为 Angstrom，经简化的理想几何坐标
-import type { Atom, Bond } from '../../types.js';
+import type { Atom, Bond } from '../../types/index.js';
 
 interface MoleculeData {
   name: string;

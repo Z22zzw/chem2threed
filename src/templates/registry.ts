@@ -1,5 +1,5 @@
 // 模板注册表和匹配器
-import type { SceneTemplate, ParsedInput } from '../types.js';
+import type { SceneTemplate, ParsedInput } from '../types/index.js';
 import { moleculeTemplate } from './molecule.js';
 import { reactionTemplate } from './reaction.js';
 import { crystalTemplate } from './crystal.js';
